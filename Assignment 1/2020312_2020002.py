@@ -17,6 +17,8 @@ recognized by an algorithm or program.
 import hashlib
 import random
 import numpy as np
+import time
+import sys
 
 def generate_hash_value(text):    # using sha256 hash function
     return hashlib.sha256(text.encode()).hexdigest()
@@ -25,12 +27,13 @@ def generate_hash_value(text):    # using sha256 hash function
 def generate_key():
     key_len = random.randint(3, 9)
     key = ""
-    # generate key_len unique random digits
+    # generate key_len unique random digits ranging between 0 to key_len-1
     while len(key) < key_len:
-        digit = str(random.randint(0, 9))
+        digit = str(random.randint(0, key_len-1))
         if digit not in key:
             key += digit
     return key
+
 
 def generate_new_plain_text(plain_text, key_length, hash_length=64):
     '''Adds the required garbage characters to the plaintext for filling the transposition matrix.
@@ -40,6 +43,7 @@ def generate_new_plain_text(plain_text, key_length, hash_length=64):
 
     new_plain_text = plain_text + "."*garbage_characters
     return new_plain_text
+
 
 def transposition_matrix(new_plain_text, key, encrypt=True):
     '''Returns the transposition matrix of the new_plain_text'''
@@ -63,6 +67,7 @@ def transposition_matrix(new_plain_text, key, encrypt=True):
 
     return matrix
 
+
 def order_matrix_indices(key):
     ''' Returns the list of columns of the matrix in the order specified by the key'''
     order_indices = []
@@ -84,8 +89,8 @@ def encrypt(plain_text):
     new_plain_text = generate_new_plain_text(plain_text, len(key))
     hash_value = generate_hash_value(new_plain_text)
 
-    print('Hash value: ' + hash_value)
     print('New plain text: ' + new_plain_text)
+    print('Hash value: ' + hash_value)
     print('Key: ' + key)
 
     to_be_encrypted = new_plain_text + "#" + hash_value
@@ -117,7 +122,7 @@ def decrypt(cipher_text, key):
 
     # Flatten the transposition matrix
     decrypted_text = ''.join(matrix.flatten())
-    print(decrypted_text)
+    # print(decrypted_text)
 
     split_index = decrypted_text.rfind("#")
     hash_value = decrypted_text[split_index+1:]
@@ -135,21 +140,39 @@ def verify_decrypted_text(decrypted_text, hash_value):
     return generate_hash_value(decrypted_text) == hash_value
 
 
-def brute_force_attack(cipher_text, hash_value, key_len):
-    guess_key = "0"
+def brute_force_attack(cipher_text, key_len):
+    first_key = ""
+    for i in range(0, key_len):
+        first_key += str(i)
+    
+    last_key = ""
+    for i in range(key_len-1, 0, -1):
+        last_key += str(i)
+    
+    guess_key = first_key
+    i = 0
     while True:
         # Assumption: hash value is always appended at the end of the plaintext. (There can be extra characters after plaintext and before hash value. Need to remove them.)
         guess_key = "0" * (key_len - len(guess_key)) + guess_key
-        decrypted_text = decrypt(cipher_text, guess_key)
-        decrypted_hash_value = decrypted_text[-len(hash_value):]
+        decrypted_text, decrypted_hash_value, valid = decrypt(cipher_text, guess_key)
+        
+        print_word = "Guessing key: " + guess_key
+        sys.stdout.write('\r' + print_word)
+        sys.stdout.flush()
+        # time.sleep(0.0001)  # sleep for 1ms
+        sys.stdout.write('\r' + ' '*len(print_word))
+        i+=1
 
-        if decrypted_hash_value == hash_value:
+
+        if valid:
             print("Key found: " + guess_key)
-            print("Decrypted text: " + decrypted_text[:-len(hash_value)])
+            print("Decrypted text: " + decrypted_text[:-len(decrypted_hash_value)])
             return guess_key
         
         guess_key = str(int(guess_key) + 1)
-        if guess_key == "9" * key_len:
+        # generate a string that consists of characters that are key_len, key_len-1, key_len-2, ..., 1
+
+        if guess_key == last_key:
             print("All possible keys tried. Key not found.")
             break
         
@@ -159,15 +182,15 @@ def brute_force_attack(cipher_text, hash_value, key_len):
 def main():
     choice = int(input("Enter 1 for encryption, 2 for decryption, 3 for brute force attack: "))
     if choice == 1:
+
         file_name = input("Enter the name of the file containing the plain text: ")
         f = open(file_name, "r")
         plain_text = f.read().split("\n")
         f.close()
+
         print("Encryption starts.....")
-
         f1 = open("cipher_text.txt", "w")
-
-        # use print statements to print on the file
+        f2 = open("keys.txt", "w")
 
         for msg in plain_text:
             print("Plain text: " + msg)
@@ -177,25 +200,24 @@ def main():
             print("----------------------------------------\n")
 
             f1.write(cipher_text + "\n")
-            f1.write(key + "\n") 
+            f2.write(key + "\n") 
         f1.close()
+        f2.close()
 
         print("Encryption ends.....\n\n")
 
     elif choice == 2:
-        file_name = input("Enter the name of the file containing the cipher text: ")
-        f = open(file_name, "r")
-        # Read lines from file
+        f = open(input("Enter the name of the file containing the cipher text: "), "r")
+        f2 = open("keys.txt", "r")
         lines = f.readlines()
+        key = f2.readlines()
 
         # Remove \n from each line
         encrypted_text = []
         keys = []
         for i in range(len(lines)):
-            if i % 2 == 0:
-                encrypted_text.append(lines[i].strip())
-            else:
-                keys.append(lines[i].strip())
+            encrypted_text.append(lines[i].strip())
+            keys.append(key[i].strip())
 
         f.close()
 
@@ -207,7 +229,7 @@ def main():
             print("Key: " + keys[i])
             decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
             print("Decrypted text: " + decrypted_text)
-            print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
+            # print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
             print("Hash value: " + hash_value)
             print("Valid: " + str(valid))
             print("----------------------------------------\n")
@@ -219,29 +241,28 @@ def main():
         print("Decryption ends.....\n\n")
 
     elif choice == 3:
-        file_name = input("Enter the name of the file containing the cipher text: ")
-        f = open(file_name, "r")
-        # Read lines from file
+        f = open(input("Enter the name of the file containing the cipher text: "), "r")
+        f2 = open("keys.txt", "r")
         lines = f.readlines()
+        key_len = f2.read().split("\n")
+        key_len = [len(i.strip()) for i in key_len]
+        key_len = [i for i in key_len if i >= 3 and i <= 9]
 
         # Remove \n from each line
         encrypted_text = []
-        hash_values = []
         for i in range(len(lines)):
-            if i % 2 == 0:
                 encrypted_text.append(lines[i].strip())
-            else:
-                hash_values.append(lines[i].strip())
 
         f.close()
+        f2.close()
 
         print("Brute force attack starts.....")
         f1 = open("brute_force_attack.txt", "w")
 
         for i in range(len(encrypted_text)):
             print("Encrypted text: " + encrypted_text[i])
-            print("Hash value: " + hash_values[i])
-            key = brute_force_attack(encrypted_text[i], hash_values[i], 9)
+            print("Key length: " + str(key_len[i]))
+            key = brute_force_attack(encrypted_text[i], key_len[i])
             print("----------------------------------------\n")
 
             f1.write(key + "\n")
@@ -250,23 +271,6 @@ def main():
         print("Brute force attack ends.....\n\n")
 
 
-    # for i in range(len(plain_text)):
-    #     plain_text[i] += "#" + generate_hash_value(plain_text[i])
-
-    # ans = True
-    # # measure the time taken for it to complete
-    # import time
-
-    # start = time.time()
-    # for _ in range(10001):
-    #     s = generate_key()
-    #     if len(set(s))-len(s) != 0:
-    #         ans = False
-    #         break
-    # end = time.time()
-
-    # print(ans, "time taken:", end-start)
-
-
 if __name__ == "__main__":
     main()
+    

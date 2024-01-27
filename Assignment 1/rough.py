@@ -15,17 +15,30 @@
 #     matrix.append([])
 # print(matrix)
 
-import numpy as np
+# import numpy as np
 
-n = '4037'
-s = np.argsort(n)
-print(s)
+# n = '4037'
+# s = np.argsort(n)
+# print(s)
 
-# create a numpy array of size n_rows x n_cols
-matrix = np.empty((3, 4), dtype=str)
-print(matrix)
+# # create a numpy array of size n_rows x n_cols
+# matrix = np.empty((3, 4), dtype=str)
+# print(matrix)
 
-c2 = 'abc'
-# add c2 to column 2
-matrix[:, 2] = list(c2)
-print(matrix)
+# c2 = 'abc'
+# # add c2 to column 2
+# matrix[:, 2] = list(c2)
+# print(matrix)
+
+
+import time
+import sys
+
+strings = ["Hello", "Pythonista", "World"] * 1000
+i = 0
+for s in strings:
+    sys.stdout.write('\r' + s)
+    sys.stdout.flush()
+    time.sleep(0.1)  # sleep for 1ms
+    sys.stdout.write('\r' + ' '*len(s))
+    i+=1
