@@ -16,6 +16,7 @@ recognized by an algorithm or program.
 '''
 import hashlib
 import random
+import numpy as np
 
 def generate_hash_value(text):    # using sha256 hash function
     return hashlib.sha256(text.encode()).hexdigest()
@@ -40,16 +41,39 @@ def generate_new_plain_text(plain_text, key_length, hash_length=256):
     new_plain_text = plain_text + "."*garbage_characters
     return new_plain_text
 
-def transposition_matrix(new_plain_text, key):
+def transposition_matrix(new_plain_text, key, encrypt=True):
     '''Returns the transposition matrix of the new_plain_text'''
-    matrix = []
     n_cols = len(key)
     n_rows = len(new_plain_text) // n_cols
 
-    for i in range(n_rows):
-        matrix.append(list(new_plain_text[i*n_cols:(i+1)*n_cols]))
+    if encrypt:
+        matrix = []
+        for i in range(n_rows):
+            matrix.append(list(new_plain_text[i*n_cols:(i+1)*n_cols]))
+
+    else:
+        # Create a numpy array of size n_rows x n_cols
+        matrix = np.empty((n_rows, n_cols), dtype=str)
+        key_list = list(map(int, str(key)))
+        ordered_indices = np.argsort(key_list)
+
+        # Extract the packets from the cipher text to fill column
+        for i in range(n_cols):
+            matrix[:, ordered_indices[i]] = list(new_plain_text[i*n_rows:(i+1)*n_rows])            
 
     return matrix
+
+def order_matrix_indices(key):
+    ''' Returns the list of columns of the matrix in the order specified by the key'''
+    order_indices = []
+    
+    for i in key:
+        order_indices.append((int(i), key.index(i)))
+
+    order_indices.sort()
+
+    return order_indices
+
 
 def encrypt(plain_text):
     '''Calculates the hash value of the new_plain_text and appends it to the new_plain_text.
@@ -62,14 +86,22 @@ def encrypt(plain_text):
 
     print('Hash value: ' + hash_value)
     print('New plain text: ' + new_plain_text)
+    print('Key: ' + key)
 
     to_be_encrypted = new_plain_text + "#" + hash_value
     cipher_text = ""
 
     matrix = transposition_matrix(to_be_encrypted, key)
+    print("Transposition matrix: ")
+    for row in matrix:
+        print(row)
+    
+    ordered_indices = order_matrix_indices(key)
+
     for i in range(len(key)):
         for j in range(len(matrix)):
-            cipher_text += matrix[j][int(key[i])]
+            cipher_text += matrix[j][ordered_indices[i][1]]
+
 
     return cipher_text, key
 
@@ -79,10 +111,11 @@ def decrypt(cipher_text, key):
     Removes the hash value from the decrypted_text and returns it.'''
 
     decrypted_text = ""
-    matrix = transposition_matrix(cipher_text, key)
-    for i in range(len(key)):
-        for j in range(len(matrix)):
-            decrypted_text += matrix[j][key.index(str(i))]
+    matrix = transposition_matrix(cipher_text, key, encrypt=False)
+
+    # Flatten the transposition matrix
+    decrypted_text = ''.join(matrix.flatten())
+    print(decrypted_text)
 
     split_index = decrypted_text.rfind("#")
     hash_value = decrypted_text[split_index+1:]
@@ -143,6 +176,7 @@ def main():
 
             f1.write(cipher_text + "\n")
             f1.write(key + "\n") 
+            break
         f1.close()
 
         print("Encryption ends.....\n\n")
