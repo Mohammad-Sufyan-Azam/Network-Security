@@ -32,7 +32,7 @@ def generate_key():
             key += digit
     return key
 
-def generate_new_plain_text(plain_text, key_length, hash_length=256):
+def generate_new_plain_text(plain_text, key_length, hash_length=64):
     '''Adds the required garbage characters to the plaintext for filling the transposition matrix.
     new_plain_text = plain_text + garbage_characters'''
     characters_present = len(plain_text) + hash_length + 1      # +1 for the "#" character
@@ -90,6 +90,8 @@ def encrypt(plain_text):
 
     to_be_encrypted = new_plain_text + "#" + hash_value
     cipher_text = ""
+
+    print('Message to be encrypted: ' + to_be_encrypted)
 
     matrix = transposition_matrix(to_be_encrypted, key)
     print("Transposition matrix: ")
@@ -176,7 +178,6 @@ def main():
 
             f1.write(cipher_text + "\n")
             f1.write(key + "\n") 
-            break
         f1.close()
 
         print("Encryption ends.....\n\n")
@@ -206,6 +207,7 @@ def main():
             print("Key: " + keys[i])
             decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
             print("Decrypted text: " + decrypted_text)
+            print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
             print("Hash value: " + hash_value)
             print("Valid: " + str(valid))
             print("----------------------------------------\n")
