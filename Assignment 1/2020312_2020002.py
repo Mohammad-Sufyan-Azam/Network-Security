@@ -60,6 +60,9 @@ def encrypt(plain_text):
     new_plain_text = generate_new_plain_text(plain_text, len(key))
     hash_value = generate_hash_value(new_plain_text)
 
+    print('Hash value: ' + hash_value)
+    print('New plain text: ' + new_plain_text)
+
     to_be_encrypted = new_plain_text + "#" + hash_value
     cipher_text = ""
 
@@ -85,7 +88,9 @@ def decrypt(cipher_text, key):
     hash_value = decrypted_text[split_index+1:]
     decrypted_text = decrypted_text[:split_index]
 
-    return decrypted_text, hash_value
+    valid = verify_decrypted_text(decrypted_text, hash_value)
+
+    return decrypted_text, hash_value, valid
 
 
 def verify_decrypted_text(decrypted_text, hash_value):
@@ -117,27 +122,114 @@ def brute_force_attack(cipher_text, hash_value, key_len):
 
 
 def main():
-    f = open("input.txt", "r")
-    plain_text = f.read().split("\n")
-    f.close()
-    # print(plain_text)
+    choice = int(input("Enter 1 for encryption, 2 for decryption, 3 for brute force attack: "))
+    if choice == 1:
+        file_name = input("Enter the name of the file containing the plain text: ")
+        f = open(file_name, "r")
+        plain_text = f.read().split("\n")
+        f.close()
+        print("Encryption starts.....")
 
-    for i in range(len(plain_text)):
-        plain_text[i] += "#" + generate_hash_value(plain_text[i])
+        f1 = open("cipher_text.txt", "w")
 
-    ans = True
-    # measure the time taken for it to complete
-    import time
+        # use print statements to print on the file
 
-    start = time.time()
-    for _ in range(10001):
-        s = generate_key()
-        if len(set(s))-len(s) != 0:
-            ans = False
-            break
-    end = time.time()
+        for msg in plain_text:
+            print("Plain text: " + msg)
+            cipher_text, key = encrypt(msg)
+            print("Encrypted text: " + cipher_text)
+            print("Key: " + key)
+            print("----------------------------------------\n")
 
-    print(ans, "time taken:", end-start)
+            f1.write(cipher_text + "\n")
+            f1.write(key + "\n") 
+        f1.close()
+
+        print("Encryption ends.....\n\n")
+
+    elif choice == 2:
+        file_name = input("Enter the name of the file containing the cipher text: ")
+        f = open(file_name, "r")
+        # Read lines from file
+        lines = f.readlines()
+
+        # Remove \n from each line
+        encrypted_text = []
+        keys = []
+        for i in range(len(lines)):
+            if i % 2 == 0:
+                encrypted_text.append(lines[i].strip())
+            else:
+                keys.append(lines[i].strip())
+
+        f.close()
+
+        print("Decryption starts.....")
+        f1 = open("decrypted_text.txt", "w")
+
+        for i in range(len(encrypted_text)):
+            print("Encrypted text: " + encrypted_text[i])
+            print("Key: " + keys[i])
+            decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
+            print("Decrypted text: " + decrypted_text)
+            print("Hash value: " + hash_value)
+            print("Valid: " + str(valid))
+            print("----------------------------------------\n")
+
+            f1.write(decrypted_text + "\n")
+            f1.write(hash_value + "\n")
+
+        f1.close()
+        print("Decryption ends.....\n\n")
+
+    elif choice == 3:
+        file_name = input("Enter the name of the file containing the cipher text: ")
+        f = open(file_name, "r")
+        # Read lines from file
+        lines = f.readlines()
+
+        # Remove \n from each line
+        encrypted_text = []
+        hash_values = []
+        for i in range(len(lines)):
+            if i % 2 == 0:
+                encrypted_text.append(lines[i].strip())
+            else:
+                hash_values.append(lines[i].strip())
+
+        f.close()
+
+        print("Brute force attack starts.....")
+        f1 = open("brute_force_attack.txt", "w")
+
+        for i in range(len(encrypted_text)):
+            print("Encrypted text: " + encrypted_text[i])
+            print("Hash value: " + hash_values[i])
+            key = brute_force_attack(encrypted_text[i], hash_values[i], 9)
+            print("----------------------------------------\n")
+
+            f1.write(key + "\n")
+
+        f1.close()
+        print("Brute force attack ends.....\n\n")
+
+
+    # for i in range(len(plain_text)):
+    #     plain_text[i] += "#" + generate_hash_value(plain_text[i])
+
+    # ans = True
+    # # measure the time taken for it to complete
+    # import time
+
+    # start = time.time()
+    # for _ in range(10001):
+    #     s = generate_key()
+    #     if len(set(s))-len(s) != 0:
+    #         ans = False
+    #         break
+    # end = time.time()
+
+    # print(ans, "time taken:", end-start)
 
 
 if __name__ == "__main__":
