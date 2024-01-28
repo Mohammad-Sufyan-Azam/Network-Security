@@ -158,22 +158,28 @@ def verify_decrypted_text(decrypted_text, hash_value):
 def next_permutation(key):
     '''Returns the next permutation of the key passed as argument.'''
     key = list(key)
-    bPoint, n = -1, len(key)
-    for i in range(n-2,-1,-1):
-        if key[i] >= key[i+1]: 
+    break_point= -1
+    
+    for i in range(len(key)-2, -1, -1):
+        if key[i] >= key[i+1]:
             continue
-        bPoint = i
-        for j in range(n-1,i,-1):
-            if key[j] > key[bPoint]:
-                key[j], key[bPoint] = key[bPoint], key[j]
+
+        break_point = i
+        for j in range(len(key)-1, i, -1):
+            if key[j] > key[break_point]:
+                temp = key[j]
+                key[j] = key[break_point]
+                key[break_point] = temp
                 break
         break
-    key[bPoint+1:] = reversed(key[bPoint+1:])
+
+    key[break_point+1:] = reversed(key[break_point+1:])
     key = "".join(key)
+
     return key
 
+
 def __visual_affects():
-    
     while True:
         col = ['red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white']
         print('\n')
@@ -193,10 +199,8 @@ def __visual_affects():
         if ctrl == '':
             return
 		
-	
 
-def brute_force_attack(cipher_text):
-
+def brute_force_attack(cipher_text, key=None):
     i = 0
     start_time = time.time()
     for key_len in range(3, 10):
@@ -212,7 +216,6 @@ def brute_force_attack(cipher_text):
             sys.stdout.flush()
             sys.stdout.write('\r' + ' '*len(print_word))
             i+=1
-
 
             if valid:
                 end_time = time.time()
@@ -253,7 +256,6 @@ def main_menu():
 
 
 def main():
-
     choice = main_menu()
     # choice = 1
     while choice != 4:
@@ -262,6 +264,7 @@ def main():
             # file_name = "input.txt"
             f = open(file_name, "r")
             plain_text = f.read().split("\n")
+            plain_text = [i for i in plain_text if i != '']
             f.close()
 
             print("Encryption starts.....")
