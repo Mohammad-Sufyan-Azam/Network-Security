@@ -170,29 +170,22 @@ def next_permutation(key):
     return key
 
 
-def brute_force_attack(cipher_text, key_len):
-    first_key = ""
-    first_key = "".join([str(i) for i in range(0, key_len)])
-    # for i in range(0, key_len):
-    #     first_key += str(i)
-    
-    last_key = ""
-    for i in range(key_len-1, 0, -1):
-        last_key += str(i)
+def brute_force_attack(cipher_text, key_len, key=None):
+    if (key is not None) and (key is not "Key not found") and (len(key) == key_len):
+        first_key = key
+    else:
+        first_key = "".join([str(i) for i in range(0, key_len)])
     
     guess_key = first_key
     start_time = time.time()
 
     i = 0
     while True:
-        # Assumption: hash value is always appended at the end of the plaintext. (There can be extra characters after plaintext and before hash value. Need to remove them.)
-        # guess_key = "0" * (key_len - len(guess_key)) + guess_key
         decrypted_text, decrypted_hash_value, valid = decrypt(cipher_text, guess_key)
         
         print_word = "Guessing key: " + guess_key
         sys.stdout.write('\r' + "Guessing key: " + colored(guess_key, 'red'))
         sys.stdout.flush()
-        # time.sleep(0.001)  # sleep for 1ms
         sys.stdout.write('\r' + ' '*len(print_word))
         i+=1
 
@@ -209,7 +202,7 @@ def brute_force_attack(cipher_text, key_len):
         
         guess_key = next_permutation(guess_key)
 
-        if guess_key == last_key:
+        if guess_key == first_key:
             print("All possible keys tried. Key not found.")
             break
         
@@ -281,7 +274,6 @@ def main():
                 print("Key: " + keys[i])
                 decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
                 print("Decrypted text: " + decrypted_text)
-                # print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
                 print("Hash value: " + hash_value)
                 print("Valid: " + str(valid))
                 print("----------------------------------------\n")
@@ -307,10 +299,11 @@ def main():
             print("Brute force attack starts.....")
             f1 = open("brute_force_attack.txt", "w")
 
+            key = None
             for i in range(len(encrypted_text)):
                 print("Encrypted text: " + encrypted_text[i])
                 print("Key length: " + str(key_len[i]))
-                key = brute_force_attack(encrypted_text[i], key_len[i])
+                key = brute_force_attack(encrypted_text[i], key_len[i], key)
                 print("----------------------------------------\n")
 
                 f1.write(key + "\n")
