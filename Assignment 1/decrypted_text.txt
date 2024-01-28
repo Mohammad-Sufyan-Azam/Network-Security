@@ -1,7 +1,7 @@
-The cat is on the mat....
-0655d535ee57a94ff72fddb9fb7066a40f61359a70fa4c9aa0ed23a3ab711024
-The dog is on the bed....
-3fad2048221770865c5e37c53d1e3b736bff9d210c5697d9f8f5cb5928c6fa3a
+The cat is on the mat..
+f7bc4ea4b4d5ad60891e3a7ff1b1be666cefdd84706f04cc36f4e880bbd9d0b1
+The dog is on the bed..
+67605dd5f848e7e7e25230c5a9ffec5930fce3dd54679fb7fa45ef1b9048140f
 Derek saw an ice cream truck going down the lane.......
 f423983db300569a9386a1429c063f4a63b802587bad55f9b0e7e9c1e02908db
 The code is 2312 for the nuclear missiles..

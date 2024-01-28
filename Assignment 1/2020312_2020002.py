@@ -200,7 +200,7 @@ def brute_force_attack(cipher_text, key_len):
         if valid:
             end_time = time.time()
             print("\nKey found: " + colored(guess_key, 'green'))
-            print(f"Time taken: {end_time-start_time}")
+            print(f"Time taken: {end_time-start_time} sec")
             print("Decrypted text: " + decrypted_text)
             print("Hash value: " + decrypted_hash_value)
             print("Number of keys tried: " + str(i))
@@ -216,93 +216,109 @@ def brute_force_attack(cipher_text, key_len):
     return "Key not found"
 
 
+def main_menu():
+    print("------------------------------------------------")
+    print("Encryption using Transposition Cipher Program")
+    print("------------------------------------------------")
+    print("1. Encrypt")
+    print("2. Decrypt")
+    print("3. Brute force attack")
+    print("4. Exit")
+    print("----------------------------------------\n")
+    choice = int(input("Enter your choice: "))
+    print("----------------------------------------\n")
+    return choice
+
+
 def main():
 
-    choice = int(input("Enter 1 for encryption, 2 for decryption, 3 for brute force attack: "))
+    choice = main_menu()
     # choice = 1
+    while choice != 4:
+        if choice == 1:
+            file_name = input("Enter the name of the file containing the plain text: ")
+            # file_name = "input.txt"
+            f = open(file_name, "r")
+            plain_text = f.read().split("\n")
+            f.close()
 
-    if choice == 1:
-        file_name = input("Enter the name of the file containing the plain text: ")
-        # file_name = "input.txt"
-        f = open(file_name, "r")
-        plain_text = f.read().split("\n")
-        f.close()
+            print("Encryption starts.....")
+            f1 = open("cipher_text.txt", "w")
+            f2 = open("keys.txt", "w")
 
-        print("Encryption starts.....")
-        f1 = open("cipher_text.txt", "w")
-        f2 = open("keys.txt", "w")
+            for msg in plain_text:
+                print("Plain text: " + msg)
+                key = generate_key()
+                cipher_text = encrypt(msg, key)
+                print("Encrypted text: " + cipher_text)
+                print("Key: " + key)
+                print("----------------------------------------\n")
 
-        for msg in plain_text:
-            print("Plain text: " + msg)
-            key = generate_key()
-            cipher_text = encrypt(msg, key)
-            print("Encrypted text: " + cipher_text)
-            print("Key: " + key)
-            print("----------------------------------------\n")
+                f1.write(cipher_text + "\n")
+                f2.write(key + "\n") 
+            f1.close()
+            f2.close()
 
-            f1.write(cipher_text + "\n")
-            f2.write(key + "\n") 
-        f1.close()
-        f2.close()
+            print("Encryption ends.....\n\n")
+            # choice = 2
 
-        print("Encryption ends.....\n\n")
-        # choice = 2
+        if choice == 2:
+            f = open(input("Enter the name of the file containing the cipher text: "), "r")
+            # f = open("cipher_text.txt", "r")
+            f2 = open("keys.txt", "r")
+            encrypted_text = f.read().split("\n")
+            encrypted_text = [i for i in encrypted_text if i != '']
+            keys = f2.read().split("\n")
+            keys = [i for i in keys if i != '']
 
-    if choice == 2:
-        f = open(input("Enter the name of the file containing the cipher text: "), "r")
-        # f = open("cipher_text.txt", "r")
-        f2 = open("keys.txt", "r")
-        encrypted_text = f.read().split("\n")
-        encrypted_text = [i for i in encrypted_text if i != '']
-        keys = f2.read().split("\n")
-        keys = [i for i in keys if i != '']
+            f.close()
 
-        f.close()
+            print("Decryption starts.....")
+            f1 = open("decrypted_text.txt", "w")
 
-        print("Decryption starts.....")
-        f1 = open("decrypted_text.txt", "w")
+            for i in range(len(encrypted_text)):
+                print("Encrypted text: " + encrypted_text[i])
+                print("Key: " + keys[i])
+                decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
+                print("Decrypted text: " + decrypted_text)
+                # print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
+                print("Hash value: " + hash_value)
+                print("Valid: " + str(valid))
+                print("----------------------------------------\n")
 
-        for i in range(len(encrypted_text)):
-            print("Encrypted text: " + encrypted_text[i])
-            print("Key: " + keys[i])
-            decrypted_text, hash_value, valid = decrypt(encrypted_text[i], keys[i])
-            print("Decrypted text: " + decrypted_text)
-            # print("Calculated Hash Value: " + generate_hash_value(decrypted_text))
-            print("Hash value: " + hash_value)
-            print("Valid: " + str(valid))
-            print("----------------------------------------\n")
+                f1.write(decrypted_text + "\n")
+                f1.write(hash_value + "\n")
 
-            f1.write(decrypted_text + "\n")
-            f1.write(hash_value + "\n")
+            f1.close()
+            print("Decryption ends.....\n\n")
 
-        f1.close()
-        print("Decryption ends.....\n\n")
+        elif choice == 3:
+            f = open(input("Enter the name of the file containing the cipher text: "), "r")
+            f2 = open("keys.txt", "r")
+            encrypted_text = f.read().split("\n")
+            encrypted_text = [i for i in encrypted_text if i != '']
+            key_len = f2.read().split("\n")
+            key_len = [len(i.strip()) for i in key_len]
+            key_len = [i for i in key_len if i >= 3 and i <= 9]
 
-    elif choice == 3:
-        f = open(input("Enter the name of the file containing the cipher text: "), "r")
-        f2 = open("keys.txt", "r")
-        encrypted_text = f.read().split("\n")
-        encrypted_text = [i for i in encrypted_text if i != '']
-        key_len = f2.read().split("\n")
-        key_len = [len(i.strip()) for i in key_len]
-        key_len = [i for i in key_len if i >= 3 and i <= 9]
+            f.close()
+            f2.close()
 
-        f.close()
-        f2.close()
+            print("Brute force attack starts.....")
+            f1 = open("brute_force_attack.txt", "w")
 
-        print("Brute force attack starts.....")
-        f1 = open("brute_force_attack.txt", "w")
+            for i in range(len(encrypted_text)):
+                print("Encrypted text: " + encrypted_text[i])
+                print("Key length: " + str(key_len[i]))
+                key = brute_force_attack(encrypted_text[i], key_len[i])
+                print("----------------------------------------\n")
 
-        for i in range(len(encrypted_text)):
-            print("Encrypted text: " + encrypted_text[i])
-            print("Key length: " + str(key_len[i]))
-            key = brute_force_attack(encrypted_text[i], key_len[i])
-            print("----------------------------------------\n")
+                f1.write(key + "\n")
 
-            f1.write(key + "\n")
-
-        f1.close()
-        print("Brute force attack ends.....\n\n")
+            f1.close()
+            print("Brute force attack ends.....\n\n")
+        
+        choice = main_menu()
 
 
 if __name__ == "__main__":
