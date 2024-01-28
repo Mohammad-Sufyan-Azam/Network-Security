@@ -20,6 +20,9 @@ import numpy as np
 import time
 import sys
 from termcolor import colored
+import termcolor
+import os
+from timedinput import timedinput as ti
 
 def generate_hash_value(text):    # using sha256 hash function
     return hashlib.sha256(text.encode()).hexdigest()
@@ -169,9 +172,31 @@ def next_permutation(key):
     key = "".join(key)
     return key
 
+def __visual_affects():
+    
+    while True:
+        col = ['red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white']
+        print('\n')
+        for color in col:
+            
+            print_word = colored('\033[1m' + "HACKED SUCCESSFULLY !!!" + '\033[0m', color)
+            sys.stdout.write('\r' + print_word)
+            # sleep_time = 0.5
+            time.sleep(0.5)
+            sys.stdout.flush()
+            # sys.stdout.write('\r' + ' '*len(print_word))
+        
+        termcolor.cprint('\x1B[3m'+'\nPress Enter to reveal Details!!!'+'\x1B[23m\n', 'red', attrs=['bold'])
+        ctrl = ti('', 3, default='a')
+        # print('Timedout')
+
+        if ctrl == '':
+            return
+		
+	
 
 def brute_force_attack(cipher_text, key_len, key=None):
-    if (key is not None) and (key is not "Key not found") and (len(key) == key_len):
+    if (key != None) and (key != "Key not found") and (len(key) == key_len):
         first_key = key
     else:
         first_key = "".join([str(i) for i in range(0, key_len)])
@@ -192,7 +217,10 @@ def brute_force_attack(cipher_text, key_len, key=None):
 
         if valid:
             end_time = time.time()
-            print("\nKey found: " + colored(guess_key, 'green'))
+            __visual_affects()
+            termcolor.cprint('\n \x1B[3m'+'Key found: ' + guess_key + '\x1B[23m', 'green', attrs=['bold'])
+                
+            # print("\nKey found: " + colored(guess_key, 'green'))
             print(f"Time taken: {end_time-start_time} sec")
             print("Decrypted text: " + decrypted_text)
             print("Hash value: " + decrypted_hash_value)
@@ -307,6 +335,10 @@ def main():
                 print("----------------------------------------\n")
 
                 f1.write(key + "\n")
+
+                continue_attack = input("Continue attack on next cipher text? (y/n): ")
+                if continue_attack == 'n':
+                    break
 
             f1.close()
             print("Brute force attack ends.....\n\n")
