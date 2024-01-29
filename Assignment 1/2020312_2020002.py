@@ -188,7 +188,7 @@ def __visual_affects():
             print_word = colored('\033[1m' + "HACKED SUCCESSFULLY !!!" + '\033[0m', color)
             sys.stdout.write('\r' + print_word)
             # sleep_time = 0.5
-            time.sleep(0.5)
+            time.sleep(0.1)
             sys.stdout.flush()
             # sys.stdout.write('\r' + ' '*len(print_word))
         
@@ -203,8 +203,13 @@ def __visual_affects():
 def brute_force_attack(cipher_text, key=None):
     i = 0
     start_time = time.time()
-    for key_len in range(3, 10):
-        first_key = "".join([str(i) for i in range(0, key_len)])
+    key_len = 3
+    while key_len <= 9:
+        if key is None or key is 'Key not found':
+            first_key = "".join([str(i) for i in range(0, key_len)])
+        else:
+            first_key = key
+            key_len = len(key)
         
         guess_key = first_key
         print('Trying Key Length: ' + str(key_len) + '...')
@@ -221,7 +226,7 @@ def brute_force_attack(cipher_text, key=None):
                 end_time = time.time()
                 __visual_affects()
                 termcolor.cprint('\n \x1B[3m'+'Key found: ' + guess_key + '\x1B[23m', 'green', attrs=['bold'])
-                    
+                
                 # print("\nKey found: " + colored(guess_key, 'green'))
                 print(f"Time taken: {end_time-start_time} sec")
                 print("Decrypted text: " + decrypted_text)
@@ -235,8 +240,12 @@ def brute_force_attack(cipher_text, key=None):
             if guess_key == first_key:
                 # print("All possible keys tried. Key not found.")
                 break
-
+        
+        key = None
         sys.stdout.flush()
+        key_len = (key_len + 1) % 10
+        if key_len in [0,1,2]:
+            key_len = 3
             
     return "Key not found"
 
@@ -330,7 +339,7 @@ def main():
             for i in range(len(encrypted_text)):
                 print("Encrypted text: " + encrypted_text[i])
                 # print("Key length: " + str(key_len[i]))
-                key = brute_force_attack(encrypted_text[i])
+                key = brute_force_attack(encrypted_text[i], key)
                 print("----------------------------------------\n")
 
                 f1.write(key + "\n")
