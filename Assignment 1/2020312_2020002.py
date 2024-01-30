@@ -24,8 +24,19 @@ import termcolor
 import os
 from timedinput import timedinput as ti
 
+
 def generate_hash_value(text):    # using sha256 hash function
-    return hashlib.sha256(text.encode()).hexdigest()
+    hash = hashlib.sha256(text.encode()).hexdigest()
+    # Mapping will be 0->a, 1->b, 2->c, ..., 9->j, a->k, b->l, ..., e->p
+    character_hash = ""
+    for i in hash:
+        # reading hash value[i] as the above defined mapping
+        if i.isdigit():
+            character_hash += chr(ord('a') + int(i))
+        else:
+            character_hash += chr(ord('k') + ord(i) - ord('a'))
+
+    return character_hash
 
 
 def generate_key():
@@ -39,24 +50,13 @@ def generate_key():
     return key
 
 
-# def generate_key():
-#     key_len = random.randint(5, 9)
-#     key = ""
-#     # generate key_len unique random digits ranging between 0 to key_len-1
-#     while len(key) < key_len:
-#         digit = str(random.randint(0, 9))
-#         if digit not in key:
-#             key += digit
-#     return key
-
-
 def generate_new_plain_text(plain_text, key_length, hash_length=64):
     '''Adds the required garbage characters to the plaintext for filling the transposition matrix.
     new_plain_text = plain_text + garbage_characters'''
     characters_present = len(plain_text) + hash_length + 1      # +1 for the "#" character
     garbage_characters = key_length - characters_present % key_length
 
-    new_plain_text = plain_text + "."*garbage_characters
+    new_plain_text = plain_text + " "*garbage_characters
     return new_plain_text
 
 
@@ -205,7 +205,7 @@ def brute_force_attack(cipher_text, key=None):
     start_time = time.time()
     key_len = 3
     while key_len <= 9:
-        if key is None or key is 'Key not found':
+        if key is None or key == 'Key not found':
             first_key = "".join([str(i) for i in range(0, key_len)])
         else:
             first_key = key
@@ -336,6 +336,7 @@ def main():
             f1 = open("brute_force_attack.txt", "w")
 
             key = None
+            start_time = time.time()
             for i in range(len(encrypted_text)):
                 print("Encrypted text: " + encrypted_text[i])
                 # print("Key length: " + str(key_len[i]))
@@ -347,8 +348,10 @@ def main():
                 continue_attack = input("Continue attack on next cipher text? (y/n): ")
                 if continue_attack == 'n':
                     break
-
+            
             f1.close()
+            end_time = time.time()
+            print("Total time taken during the brute force attack:", end_time - start_time)
             print("Brute force attack ends.....\n\n")
         
         choice = main_menu()
