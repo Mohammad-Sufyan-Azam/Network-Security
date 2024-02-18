@@ -7,8 +7,6 @@ b.  Verify that output of the 1st encryption round is same as output of the 15th
 c.  Verify that output of the 14th encryption round is same as the output of the 2nd decryption round as illustrated below. 
 '''
 
-import numpy as np
-
 
 def string_to_binary(s):
     return ''.join(format(ord(i), '08b') for i in s)
@@ -43,23 +41,23 @@ IP_INV = [40, 8, 48, 16, 56, 24, 64, 32,
           36, 4, 44, 12, 52, 20, 60, 28,
           35, 3, 43, 11, 51, 19, 59, 27,
           34, 2, 42, 10, 50, 18, 58, 26,
-          33, 1, 41, 9, 49, 17, 57, 25]
+          33, 1, 41,  9, 49, 17, 57, 25]
 
 # Expansion Table
-E = [32, 1, 2, 3, 4, 5,
-     4, 5, 6, 7, 8, 9,
-     8, 9, 10, 11, 12, 13,
+E = [32,  1,  2,  3,  4,  5,
+      4,  5,  6,  7,  8,  9,
+      8,  9, 10, 11, 12, 13,
      12, 13, 14, 15, 16, 17,
      16, 17, 18, 19, 20, 21,
      20, 21, 22, 23, 24, 25,
      24, 25, 26, 27, 28, 29,
-     28, 29, 30, 31, 32, 1]
+     28, 29, 30, 31, 32,  1]
 
 # Permutation Table
-P = [16, 7, 20, 21, 29, 12, 28, 17,
-     1, 15, 23, 26, 5, 18, 31, 10,
-     2, 8, 24, 14, 32, 27, 3, 9,
-     19, 13, 30, 6, 22, 11, 4, 25]
+P = [16,  7, 20, 21, 29, 12, 28, 17,
+      1, 15, 23, 26,  5, 18, 31, 10,
+      2,  8, 24, 14, 32, 27,  3,  9,
+     19, 13, 30,  6, 22, 11,  4, 25]
 
 # Permutation Choice 1
 PC1 = [57, 49, 41, 33, 25, 17,  9,
@@ -70,7 +68,7 @@ PC1 = [57, 49, 41, 33, 25, 17,  9,
         7, 62, 54, 46, 38, 30, 22,
        14,  6, 61, 53, 45, 37, 29,
        21, 13,  5, 28, 20, 12,  4]
-# print(max(PC1), min(PC1), len(PC1))
+
 # Permutation Choice 2
 PC2 = [14, 17, 11, 24,  1,  5,  3, 28,
        15,  6, 21, 10, 23, 19, 12,  4,
@@ -78,9 +76,6 @@ PC2 = [14, 17, 11, 24,  1,  5,  3, 28,
        41, 52, 31, 37, 47, 55, 30, 40,
        51, 45, 33, 48, 44, 49, 39, 56,
        34, 53, 46, 42, 50, 36, 29, 32]
-# print(max(PC2), min(PC2), len(PC2))
-# Shift Table
-shift_table = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 
 
 def permute(data, table):
@@ -187,12 +182,20 @@ def substitution_boxes(expanded_half_block):
 
 
     s_box_outputs = []
+    # converting the 48-bit expanded half block to 8 6-bit blocks
+    new_blocks = [expanded_half_block[i:i+6] for i in range(0, 48, 6)]
+
     for i in range(8):
-        row = int("".join(map(str, expanded_half_block[i * 6] + expanded_half_block[i * 6 + 5])), 2)
-        # print(f"Row: {row}")
-        col = int("".join(map(str, expanded_half_block[i * 6 + 1:i * 6 + 5])), 2)
-        # print(f"Col: {col}")
+        row = int(new_blocks[i][0] + new_blocks[i][5], 2)
+        col = int(new_blocks[i][1:5], 2)
         s_box_outputs.extend([int(x) for x in format(s_boxes[i][row][col], '04b')])
+
+
+        # row = int("".join(map(str, expanded_half_block[i * 6] + expanded_half_block[i * 6 + 5])), 2)
+        # # print(f"Row: {row}")
+        # col = int("".join(map(str, expanded_half_block[i * 6 + 1:i * 6 + 5])), 2)
+        # # print(f"Col: {col}")
+        # s_box_outputs.extend([int(x) for x in format(s_boxes[i][row][col], '04b')])
     # print(f"Length of s_box_outputs: {len(s_box_outputs)}")
 
     return ''.join(map(str, s_box_outputs))
@@ -234,14 +237,6 @@ def final_permutation(input_block):
     return permute(input_block, IP_INV)
 
 
-def expand_half_block(half_block):
-    """
-    This function expands a 32-bit half block to 48 bits using the expansion table.
-    :param half_block: 32-bit half block
-    :return: 48-bit expanded block
-    """
-    pass
-
 def xor(block1, block2):
     """
     This function performs a bitwise XOR operation on two blocks.
@@ -249,23 +244,9 @@ def xor(block1, block2):
     :param block2: Second block
     :return: Resultant block after XOR operation
     """
+    # print("Length of block1: ", len(block1), block1)
+    # print("Length of block2: ", len(block2), block2)
     return ''.join(str(int(block1[i]) ^ int(block2[i])) for i in range(len(block1)))
-
-def s_box_substitution(expanded_half_block):
-    """
-    This function performs substitution on the expanded half block using 8 S-boxes.
-    :param expanded_half_block: 48-bit expanded half block
-    :return: 32-bit substituted block
-    """
-    pass
-
-def p_box_permutation(half_block):
-    """
-    This function performs permutation on the half block using the P-box.
-    :param half_block: 32-bit half block
-    :return: 32-bit permuted block
-    """
-    pass
 
 
 def des_encryption(input_block, key):
@@ -281,8 +262,8 @@ def des_encryption(input_block, key):
     keys = generate_keys(bin_key) # Returns a list of 16 strings of 48 bits each
     # print("Key generation complete. Length of each key: ", len(keys[0]))
     
-    # plaintext = initial_permutation(bin_input_block)
-    plaintext = bin_input_block
+    plaintext = initial_permutation(bin_input_block)
+    # plaintext = bin_input_block
     # print("Initial permutation complete. Length of plaintext: ", len(plaintext))
     
     L, R = plaintext[:32], plaintext[32:]  # Splits the 64-bit plaintext into two 32-bit halves
@@ -290,10 +271,10 @@ def des_encryption(input_block, key):
     for i in range(16):
         L, R = des_round(L, R, keys[i])
     
-    # encrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
-    encrypted_block = R + L
-    print("Encryption complete. Length of encrypted block: ", len(encrypted_block))
-    
+    encrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
+    # encrypted_block = R + L
+    # print("Encryption complete. Length of encrypted block: ", len(encrypted_block))
+    encrypted_block = binary_to_string(encrypted_block)
     return encrypted_block
 
 
@@ -305,28 +286,32 @@ def des_decryption(input_block, key):
     :return: 64-bit decrypted block
     """
     bin_key = string_to_binary(key)
+    # print("Length of input block: ", len(input_block))
     bin_input_block = string_to_binary(input_block)
+    # print("Length of input block: ", len(bin_input_block))
 
     keys = generate_keys(bin_key) # Returns a list of 16 strings of 48 bits each
     # print("Key generation complete. Length of each key: ", len(keys[0]))
     
-    # plaintext = initial_permutation(bin_input_block)
-    plaintext = bin_input_block
+    plaintext = initial_permutation(bin_input_block)
+    # plaintext = bin_input_block
     # print("Initial permutation complete. Length of plaintext: ", len(plaintext))
     
     L, R = plaintext[:32], plaintext[32:]  # Splits the 64-bit plaintext into two 32-bit halves
     # print("Splitting complete. Length of L: ", len(L))
     for i in range(15, -1, -1):
+        # print(f"Round: {i}", len(L), len(R))
         L, R = des_round(L, R, keys[i])
     
-    # decrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
-    decrypted_block = R + L
-    print("Decryption complete. Length of decrypted block: ", len(decrypted_block))
-    
+    decrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
+    # decrypted_block = R + L
+    # print("Decryption complete. Length of decrypted block: ", len(decrypted_block))
+    decrypted_block = binary_to_string(decrypted_block)
     return decrypted_block
 
 
 encrypt = des_encryption("helloabc", "helloabc")
-print("Ciphertext:", binary_to_string(encrypt))
+print("Ciphertext:", encrypt)
+print("Length of ciphertext:", len(encrypt))
 decrypt = des_decryption(encrypt, "helloabc")
-print("Decrypted text:", binary_to_string(decrypt))
+print("Decrypted text:", decrypt)
