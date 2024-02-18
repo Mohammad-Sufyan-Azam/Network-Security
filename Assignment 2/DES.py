@@ -207,15 +207,10 @@ def permutation(half_block):
 
 def des_round(L, R, key):
     expanded_R = expansion_permutation(R) # Expands the 32-bit half block to 48 bits
-    # print("Expanded R: ", expanded_R, len(expanded_R))
     xor_output = xor(expanded_R, key) # Performs a bitwise XOR operation on the expanded half block and the key of length 48 bits
-    # print("XOR output: ", xor_output, len(xor_output))
     substituted = substitution_boxes(xor_output) # Performs substitution using 8 S-boxes
-    # print("Substituted: ", substituted, len(substituted))
     permuted = permutation(substituted) # Performs permutation using the P-box on length 32 bits
-    # print("Permuted: ", permuted, len(permuted))
     new_R = xor(L, permuted)
-    # print("New R: ", new_R, len(new_R))
     return R, new_R
 
  
@@ -244,12 +239,10 @@ def xor(block1, block2):
     :param block2: Second block
     :return: Resultant block after XOR operation
     """
-    # print("Length of block1: ", len(block1), block1)
-    # print("Length of block2: ", len(block2), block2)
     return ''.join(str(int(block1[i]) ^ int(block2[i])) for i in range(len(block1)))
 
 
-def des_encryption(input_block, key):
+def des_encryption(input_block, key, verifyRound = 0):
     """
     This function performs the DES encryption on the input block using the given key.
     :param input_block: 64-bit input block
@@ -260,25 +253,25 @@ def des_encryption(input_block, key):
     bin_input_block = string_to_binary(input_block)
 
     keys = generate_keys(bin_key) # Returns a list of 16 strings of 48 bits each
-    # print("Key generation complete. Length of each key: ", len(keys[0]))
     
     plaintext = initial_permutation(bin_input_block)
-    # plaintext = bin_input_block
-    # print("Initial permutation complete. Length of plaintext: ", len(plaintext))
     
     L, R = plaintext[:32], plaintext[32:]  # Splits the 64-bit plaintext into two 32-bit halves
-    # print("Splitting complete. Length of L: ", len(L))
     for i in range(16):
         L, R = des_round(L, R, keys[i])
+        if verifyRound == i+1:
+            verifyConcat = R + L
     
     encrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
-    # encrypted_block = R + L
-    # print("Encryption complete. Length of encrypted block: ", len(encrypted_block))
     encrypted_block = binary_to_string(encrypted_block)
-    return encrypted_block
+
+    if verifyRound == 0:
+        return encrypted_block
+    else:
+        return encrypted_block, verifyConcat
 
 
-def des_decryption(input_block, key):
+def des_decryption(input_block, key, verifyRound = 0):
     """
     This function performs the DES decryption on the input block using the given key.
     :param input_block: 64-bit input block
@@ -286,32 +279,162 @@ def des_decryption(input_block, key):
     :return: 64-bit decrypted block
     """
     bin_key = string_to_binary(key)
-    # print("Length of input block: ", len(input_block))
     bin_input_block = string_to_binary(input_block)
-    # print("Length of input block: ", len(bin_input_block))
-
+    
     keys = generate_keys(bin_key) # Returns a list of 16 strings of 48 bits each
-    # print("Key generation complete. Length of each key: ", len(keys[0]))
     
     plaintext = initial_permutation(bin_input_block)
-    # plaintext = bin_input_block
-    # print("Initial permutation complete. Length of plaintext: ", len(plaintext))
     
     L, R = plaintext[:32], plaintext[32:]  # Splits the 64-bit plaintext into two 32-bit halves
-    # print("Splitting complete. Length of L: ", len(L))
     for i in range(15, -1, -1):
-        # print(f"Round: {i}", len(L), len(R))
         L, R = des_round(L, R, keys[i])
+        if verifyRound == i+1:
+            verifyConcat = R + L
     
     decrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
-    # decrypted_block = R + L
-    # print("Decryption complete. Length of decrypted block: ", len(decrypted_block))
     decrypted_block = binary_to_string(decrypted_block)
-    return decrypted_block
+    
+    if verifyRound == 0:
+        return decrypted_block
+    else:
+        return decrypted_block, verifyConcat
 
 
-encrypt = des_encryption("helloabc", "helloabc")
-print("Ciphertext:", encrypt)
-print("Length of ciphertext:", len(encrypt))
-decrypt = des_decryption(encrypt, "helloabc")
-print("Decrypted text:", decrypt)
+def verify_rounds(plaintext, ciphertext, key, round1, round2): 
+    keys = generate_keys(string_to_binary(key))
+    new_plaintext = initial_permutation(string_to_binary(plaintext))
+    L, R = new_plaintext[:32], new_plaintext[32:]
+    for i in range(16):
+        L, R = des_round(L, R, keys[i])
+        if i == round1-1:
+            verify_encrypt = R + L
+            break
+    
+    new_ciphertext = initial_permutation(string_to_binary(ciphertext))
+    L, R = new_ciphertext[:32], new_ciphertext[32:]
+    for i in range(15, -1, -1):
+        L, R = des_round(L, R, keys[i])
+        if i == round2-1:
+            verify_decrypt = R + L
+            break
+
+    if verify_encrypt == verify_decrypt:
+        print(f"Verification successful! Output of round {round1} encryption round is same as output of round {round2} decryption round.")
+        print(f"Output of {round1}: {verify_encrypt}")
+    else:
+        print(f"Verification failed! Output of round {round1} encryption round is not same as output of round {round2} decryption round.")
+        print(f"Output of round {round1} encryption round: {verify_encrypt}")
+        print(f"Output of round {round2} decryption round: {verify_decrypt}")
+
+
+def get_key():
+    key = None
+
+    while True:
+        key = input("Enter a secret key (8 bytes only): ")
+        if len(key) != 8:
+            print("Invalid key length. Key should be 8 bytes long.")
+        else:
+            break
+    
+    return key
+
+
+def main_menu():
+    print('----------------------------------------------------------')
+    print("1. Encryption\n2. Decryption\n3. Verification\n4. Exit")
+    choice = int(input("Enter your choice: "))
+    print('----------------------------------------------------------')
+    return choice
+
+
+def interactive_menu():
+    choice = main_menu()
+    while choice != 4:
+        if choice == 1:
+            plaintext = input("Enter plaintext: ")
+            key = get_key()
+            ciphertext = des_encryption(plaintext, key)
+            print(f"Ciphertext: {ciphertext}")
+
+        elif choice == 2:
+            ciphertext = input("Enter ciphertext: ")
+            key = get_key()
+            plaintext = des_decryption(ciphertext, key)
+            print(f"Plaintext: {plaintext}")
+
+        elif choice == 3:
+            plaintext = input("Enter plaintext: ")
+            key = get_key()
+
+            ciphertext = des_encryption(plaintext, key)
+            decrypted_plaintext = des_decryption(ciphertext, key)
+
+            print(f"Decrypted plaintext: {decrypted_plaintext}")
+
+            if plaintext == decrypted_plaintext:
+                print("Decryption successful!")
+            else:
+                print("Decryption failed!")
+            
+        else:
+            print("Invalid choice!")
+
+        choice = main_menu()
+
+
+if __name__ == "__main__":
+    print('----------------------------------------------------------')
+    print("Encrypting & Decrypting Plaintexts Using DES Algorithm!")
+    print('----------------------------------------------------------')
+    print("1. Interactive Mode")
+    print("2. File Mode")
+    print('----------------------------------------------------------')
+    choice = int(input("Enter your choice: "))
+    print('----------------------------------------------------------')
+
+    if choice == 1:
+        interactive_menu()
+    
+    elif choice == 2:
+        # read a file that contains plaintexts
+        file = open("Assignment 2/plaintext.txt", "r")
+        plaintexts = file.readlines()
+        plaintexts = [x.strip() for x in plaintexts]
+        file.close()
+
+        # # read a file that contains ciphertexts
+        # cipher_file = open("Assignment 2/ciphertext.txt", "w+")
+        # ciphertexts = cipher_file.readlines()
+        # ciphertexts = [x.strip() for x in ciphertexts]
+
+        # read a file that contains keys
+        keys_file = open("Assignment 2/keys.txt", "r")
+        keys = keys_file.readlines()
+        keys = [x.strip() for x in keys]
+        keys_file.close()
+
+        for i in range(len(plaintexts)):
+            key = keys[i]
+            plaintext = plaintexts[i]
+            
+            ciphertext = des_encryption(plaintext, key)
+            # cipher_file.write(string_to_binary(ciphertext) + "\n")
+            print(f"Plaintext: {plaintext}\nCiphertext: {ciphertext}\n")
+
+            decrypted_plaintext = des_decryption(ciphertext, key)
+            print(f"Decrypted plaintext: {decrypted_plaintext}\n")
+
+            if plaintext == decrypted_plaintext:
+                print("Decryption successful!")
+            else:
+                print("Decryption failed!")
+            
+            # verify the 1st encryption round is same as output of the 15th decryption round
+            first_fifteen = verify_rounds(plaintext, ciphertext, key, 1, 15)
+            print('----------------------------------------------------------')
+        # cipher_file.close()
+
+    else:
+        print("Invalid choice!")
+    print('----------------------------------------------------------')
