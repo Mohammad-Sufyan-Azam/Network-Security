@@ -304,27 +304,34 @@ def verify_rounds(plaintext, ciphertext, key, round1, round2):
     keys = generate_keys(string_to_binary(key))
     new_plaintext = initial_permutation(string_to_binary(plaintext))
     L, R = new_plaintext[:32], new_plaintext[32:]
+    cnt = 1
     for i in range(16):
         L, R = des_round(L, R, keys[i])
-        if i == round1-1:
+        if round1 == cnt:
             verify_encrypt = R + L
             break
+        cnt += 1
     
     new_ciphertext = initial_permutation(string_to_binary(ciphertext))
     L, R = new_ciphertext[:32], new_ciphertext[32:]
+    cnt = 1
     for i in range(15, -1, -1):
         L, R = des_round(L, R, keys[i])
-        if i == round2-1:
-            verify_decrypt = R + L
+        if round2 == cnt:
+            verify_decrypt = L + R
             break
+        cnt += 1
 
     if verify_encrypt == verify_decrypt:
         print(f"Verification successful! Output of round {round1} encryption round is same as output of round {round2} decryption round.")
-        print(f"Output of {round1}: {verify_encrypt}")
+        print(f"Output of round {round1}: {verify_encrypt}")
     else:
         print(f"Verification failed! Output of round {round1} encryption round is not same as output of round {round2} decryption round.")
         print(f"Output of round {round1} encryption round: {verify_encrypt}")
         print(f"Output of round {round2} decryption round: {verify_decrypt}")
+    
+    # use assert statements to verify the outputs
+    assert verify_encrypt == verify_decrypt, "Verification failed! Output of round {round1} encryption round is not same as output of round {round2} decryption round."
 
 
 def get_key():
@@ -431,7 +438,8 @@ if __name__ == "__main__":
                 print("Decryption failed!")
             
             # verify the 1st encryption round is same as output of the 15th decryption round
-            first_fifteen = verify_rounds(plaintext, ciphertext, key, 1, 15)
+            verify_rounds(plaintext, ciphertext, key, 1, 15)
+            verify_rounds(plaintext, ciphertext, key, 2, 14)
             print('----------------------------------------------------------')
         # cipher_file.close()
 
