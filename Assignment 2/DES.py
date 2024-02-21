@@ -302,10 +302,15 @@ def interactive_menu():
             plaintext = input("Enter plaintext: ")
             key = get_key()
             ciphertext = des_encryption(plaintext, key)
-            print(f"Ciphertext: {ciphertext}")
+            print(f"Ciphertext in string format: {ciphertext}")
+            print(f"Ciphertext in hex format: {binary_to_hex(string_to_binary(ciphertext))}")
 
         elif choice == 2:
-            ciphertext = input("Enter ciphertext: ")
+            ch = input("Do you want to enter ciphertext in string format (s) or hex format (h)? ")
+            if ch == 's':
+                ciphertext = input("Enter ciphertext: ")
+            else:
+                ciphertext = binary_to_string(hex_to_binary(input("Enter ciphertext in hex format: ")))
             key = get_key()
             plaintext = des_decryption(ciphertext, key)
             print(f"Plaintext: {plaintext}")
@@ -313,16 +318,10 @@ def interactive_menu():
         elif choice == 3:
             plaintext = input("Enter plaintext: ")
             key = get_key()
-
             ciphertext = des_encryption(plaintext, key)
-            decrypted_plaintext = des_decryption(ciphertext, key)
-
-            print(f"Decrypted plaintext: {decrypted_plaintext}")
-
-            if plaintext == decrypted_plaintext:
-                print("Decryption successful!")
-            else:
-                print("Decryption failed!")
+            
+            verify_rounds(plaintext, ciphertext, key, 1, 15)
+            verify_rounds(plaintext, ciphertext, key, 2, 14)
             
         else:
             print("Invalid choice!")
