@@ -83,11 +83,6 @@ def permute(data, table):
 
 
 def generate_keys(key):
-    """
-    This function generates 16 subkeys, each of which is 48-bits long.
-    :param key: 64-bit cipher key in bits format
-    :return: List of 16 48-bit keys
-    """
     keys = []
     key = permute(key, PC1) # Returns a 56-bit key after performing the permutation
     # print(f"Length of key after PC1: {len(key)}")
@@ -170,12 +165,12 @@ def substitution_boxes(expanded_half_block):
             [6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12]
         ],
 
-        # S8 
+        # S8
         [
-            [12, 4, 6, 1, 15, 7, 10, 8, 3, 13, 14, 5, 0, 11, 2, 9],
-            [14, 11, 4, 12, 6, 13, 15, 10, 2, 3, 8, 1, 0, 7, 5, 9],
-            [4, 10, 1, 7, 9, 5, 0, 13, 14, 2, 11, 12, 6, 8, 15, 3],
-            [2, 15, 12, 9, 5, 6, 10, 11, 7, 8, 13, 14, 0, 3, 4, 1]
+            [13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7],
+            [1, 15, 13, 8, 10, 3, 7, 4, 12, 5, 6, 11, 0, 14, 9, 2],
+            [7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8],
+            [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]
         ]
     ]
 
@@ -189,14 +184,6 @@ def substitution_boxes(expanded_half_block):
         row = int(new_blocks[i][0] + new_blocks[i][5], 2)
         col = int(new_blocks[i][1:5], 2)
         s_box_outputs.extend([int(x) for x in format(s_boxes[i][row][col], '04b')])
-
-
-        # row = int("".join(map(str, expanded_half_block[i * 6] + expanded_half_block[i * 6 + 5])), 2)
-        # # print(f"Row: {row}")
-        # col = int("".join(map(str, expanded_half_block[i * 6 + 1:i * 6 + 5])), 2)
-        # # print(f"Col: {col}")
-        # s_box_outputs.extend([int(x) for x in format(s_boxes[i][row][col], '04b')])
-    # print(f"Length of s_box_outputs: {len(s_box_outputs)}")
 
     return ''.join(map(str, s_box_outputs))
 
@@ -215,40 +202,18 @@ def des_round(L, R, key):
 
  
 def initial_permutation(input_block):
-    """
-    This function performs the initial permutation on the input block.
-    :param input_block: 64-bit input block
-    :return: 64-bit permuted block
-    """
     return permute(input_block, IP)
 
 
 def final_permutation(input_block):
-    """
-    This function performs the final permutation on the input block.
-    :param input_block: 64-bit input block
-    :return: 64-bit permuted block
-    """
     return permute(input_block, IP_INV)
 
 
 def xor(block1, block2):
-    """
-    This function performs a bitwise XOR operation on two blocks.
-    :param block1: First block
-    :param block2: Second block
-    :return: Resultant block after XOR operation
-    """
     return ''.join(str(int(block1[i]) ^ int(block2[i])) for i in range(len(block1)))
 
 
 def des_encryption(input_block, key, verifyRound = 0):
-    """
-    This function performs the DES encryption on the input block using the given key.
-    :param input_block: 64-bit input block
-    :param key: 64-bit key
-    :return: 64-bit encrypted block
-    """ 
     bin_key = string_to_binary(key)
     bin_input_block = string_to_binary(input_block)
 
@@ -272,12 +237,6 @@ def des_encryption(input_block, key, verifyRound = 0):
 
 
 def des_decryption(input_block, key, verifyRound = 0):
-    """
-    This function performs the DES decryption on the input block using the given key.
-    :param input_block: 64-bit input block
-    :param key: 64-bit key
-    :return: 64-bit decrypted block
-    """
     bin_key = string_to_binary(key)
     bin_input_block = string_to_binary(input_block)
     
@@ -288,8 +247,8 @@ def des_decryption(input_block, key, verifyRound = 0):
     L, R = plaintext[:32], plaintext[32:]  # Splits the 64-bit plaintext into two 32-bit halves
     for i in range(15, -1, -1):
         L, R = des_round(L, R, keys[i])
-        if verifyRound == i+1:
-            verifyConcat = R + L
+        if verifyRound == 16-i:
+            verifyConcat = L + R
     
     decrypted_block = final_permutation(R + L) # Swaps the two halves and performs the final permutation
     decrypted_block = binary_to_string(decrypted_block)
@@ -300,38 +259,19 @@ def des_decryption(input_block, key, verifyRound = 0):
         return decrypted_block, verifyConcat
 
 
-def verify_rounds(plaintext, ciphertext, key, round1, round2): 
-    keys = generate_keys(string_to_binary(key))
-    new_plaintext = initial_permutation(string_to_binary(plaintext))
-    L, R = new_plaintext[:32], new_plaintext[32:]
-    cnt = 1
-    for i in range(16):
-        L, R = des_round(L, R, keys[i])
-        if round1 == cnt:
-            verify_encrypt = R + L
-            break
-        cnt += 1
-    
-    new_ciphertext = initial_permutation(string_to_binary(ciphertext))
-    L, R = new_ciphertext[:32], new_ciphertext[32:]
-    cnt = 1
-    for i in range(15, -1, -1):
-        L, R = des_round(L, R, keys[i])
-        if round2 == cnt:
-            verify_decrypt = L + R
-            break
-        cnt += 1
+def verify_rounds(plaintext, ciphertext, key, round1, round2):
+    _, verify_encrypt = des_encryption(plaintext, key, round1)
+    _, verify_decrypt = des_decryption(ciphertext, key, round2)
 
     if verify_encrypt == verify_decrypt:
-        print(f"Verification successful! Output of round {round1} encryption round is same as output of round {round2} decryption round.")
-        print(f"Output of round {round1}: {verify_encrypt}")
+        print(f"Verification successful! Output of encryption round {round1} is same as output of decryption round {round2}.")
     else:
-        print(f"Verification failed! Output of round {round1} encryption round is not same as output of round {round2} decryption round.")
+        print(f"Verification failed! Output of encryption round {round1} is not the same as output of decryption round {round2}.")
         print(f"Output of round {round1} encryption round: {verify_encrypt}")
         print(f"Output of round {round2} decryption round: {verify_decrypt}")
     
     # use assert statements to verify the outputs
-    assert verify_encrypt == verify_decrypt, "Verification failed! Output of round {round1} encryption round is not same as output of round {round2} decryption round."
+    assert verify_encrypt == verify_decrypt, f"Verification failed! Output of encryption round {round1} is not the same as output of decryption round {round2}."
 
 
 def get_key():
@@ -410,11 +350,6 @@ if __name__ == "__main__":
         plaintexts = [x.strip() for x in plaintexts]
         file.close()
 
-        # # read a file that contains ciphertexts
-        # cipher_file = open("Assignment 2/ciphertext.txt", "w+")
-        # ciphertexts = cipher_file.readlines()
-        # ciphertexts = [x.strip() for x in ciphertexts]
-
         # read a file that contains keys
         keys_file = open("Assignment 2/keys.txt", "r")
         keys = keys_file.readlines()
@@ -426,7 +361,6 @@ if __name__ == "__main__":
             plaintext = plaintexts[i]
             
             ciphertext = des_encryption(plaintext, key)
-            # cipher_file.write(string_to_binary(ciphertext) + "\n")
             print(f"Plaintext: {plaintext}\nCiphertext: {ciphertext}\n")
 
             decrypted_plaintext = des_decryption(ciphertext, key)
@@ -441,7 +375,6 @@ if __name__ == "__main__":
             verify_rounds(plaintext, ciphertext, key, 1, 15)
             verify_rounds(plaintext, ciphertext, key, 2, 14)
             print('----------------------------------------------------------')
-        # cipher_file.close()
 
     else:
         print("Invalid choice!")
