@@ -6,6 +6,7 @@ b)  Build 2 clients that:
         >   exchange messages with each other in a confidential manner, suitably encrypted with public key of 
             receiver, but only after they know the other client's public key in a secure manner.  
 '''
+import os
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -30,7 +31,7 @@ class CertificateAuthority:
 
 
     # Function to create a certificate
-    def create_certificate(self, user_id, user_public_key, issuer_id, private_key_ca):
+    def __create_certificate__(self, user_id, user_public_key, issuer_id, private_key_ca):
         certificate = {
             'ID': user_id,
             'PublicKey': user_public_key.public_bytes(
@@ -61,6 +62,14 @@ class CertificateAuthority:
         # Save the certificate to a file
         json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
 
+        return certificate
+    
+
+    def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca):
+        if os.path.exists(f'certificates/{user_id}_certificate.json'):
+            certificate = json.load(open(f'certificates/{user_id}_certificate.json'))
+        else:
+            certificate = self.create_certificate(user_id, user_public_key, issuer_id, private_key_ca)
         return certificate
 
 
@@ -116,7 +125,7 @@ class CertificateAuthority:
 
 
     # Function to store keys in PEM format
-    def store_keys(self, key, file, private=True):
+    def __store_keys__(self, key, file, private=True):
         with open(file, 'wb') as f:
             if private:
                 f.write(key.private_bytes(
@@ -132,7 +141,7 @@ class CertificateAuthority:
 
 
     # Function to read keys from PEM files
-    def read_keys(self, file, private=True):
+    def __read_keys__(self, file, private=True):
         with open(file, 'rb') as f:
             if private:
                 key = serialization.load_pem_private_key(
@@ -146,6 +155,20 @@ class CertificateAuthority:
                     backend=default_backend()
                 )
         return key
+    
+
+    # Function to get keys from the files or generate new keys
+    def get_keys(self, userID, path='keys/'):
+        userID = userID.lower()
+        if os.path.exists(f'{path}{userID}_private_key.pem') and os.path.exists(f'{path}{userID}_public_key.pem'):
+            private_key = self.__read_keys__(f'{path}{userID}_private_key.pem')
+            public_key = self.__read_keys__(f'{path}{userID}_public_key.pem', private=False)
+        else:
+            private_key, public_key = self.generate_keys()
+            self.__store_keys__(private_key, f'{path}{userID}_private_key.pem')
+            self.__store_keys__(public_key, f'{path}{userID}_public_key.pem', private=False)
+        
+        return private_key, public_key
 
 
 
@@ -153,37 +176,15 @@ def main():
     # Initialize the Certificate Authority
     CA = CertificateAuthority()
 
-    # Main setup for CA and clients
-    ca_private_key, ca_public_key = CA.generate_keys()
-    client_a_private_key, client_a_public_key = CA.generate_keys()
-    client_b_private_key, client_b_public_key = CA.generate_keys()
-
-
-    # Store the keys in PEM format
-    CA.store_keys(ca_private_key, 'keys/ca_private_key.pem')
-    CA.store_keys(ca_public_key, 'keys/ca_public_key.pem', private=False)
-
-    CA.store_keys(client_a_private_key, 'keys/client_a_private_key.pem')
-    CA.store_keys(client_a_public_key, 'keys/client_a_public_key.pem', private=False)
-
-    CA.store_keys(client_b_private_key, 'keys/client_b_private_key.pem')
-    CA.store_keys(client_b_public_key, 'keys/client_b_public_key.pem', private=False)
-
-
-    # Read the keys from the files
-    ca_private_key = CA.read_keys('keys/ca_private_key.pem')
-    ca_public_key = CA.read_keys('keys/ca_public_key.pem', private=False)
-
-    client_a_private_key = CA.read_keys('keys/client_a_private_key.pem')
-    client_a_public_key = CA.read_keys('keys/client_a_public_key.pem', private=False)
-
-    client_b_private_key = CA.read_keys('keys/client_b_private_key.pem')
-    client_b_public_key = CA.read_keys('keys/client_b_public_key.pem', private=False)
+    # Main setup for CA and clients    
+    ca_private_key, ca_public_key = CA.get_keys('CA')
+    client_a_private_key, client_a_public_key = CA.get_keys('Client_A')
+    client_b_private_key, client_b_public_key = CA.get_keys('Client_B')
 
 
     # CA issues certificates for client A and B
-    cert_a = CA.create_certificate('ClientA', client_b_public_key, 'CA', ca_private_key)
-    cert_b = CA.create_certificate('ClientB', client_a_public_key, 'CA', ca_private_key)
+    cert_a = CA.get_certificate('Client_A', client_b_public_key, 'CA', ca_private_key)
+    cert_b = CA.get_certificate('Client_B', client_a_public_key, 'CA', ca_private_key)
 
 
     # Clients verify each other's certificate
