@@ -31,7 +31,7 @@ class CertificateAuthority:
 
 
     # Function to create a certificate
-    def __create_certificate__(self, user_id, user_public_key, issuer_id, private_key_ca):
+    def __create_certificate__(self, user_id, user_public_key, issuer_id, private_key_ca, duration='365 days'):
         certificate = {
             'ID': user_id,
             'PublicKey': user_public_key.public_bytes(
@@ -40,7 +40,7 @@ class CertificateAuthority:
             ).decode('utf-8'),
             'Issuer': issuer_id,
             'IssuanceDate': datetime.utcnow().isoformat(),
-            'Duration': '365 days'  # For simplicity, we're using a fixed duration
+            'Duration': duration
         }
 
         # Serialize and sign the certificate with CA's private key
@@ -60,11 +60,37 @@ class CertificateAuthority:
         certificate['Signature'] = signature.hex()
 
         return certificate
-    
+
+
+    def __verify_certificate_validity__(self, certificate):
+        duration = certificate['Duration'].lower()
+        map_ = {'days': 0, 'seconds': 0, 'microseconds': 0, 'milliseconds': 0, 'minutes': 0, 'hours': 0, 'weeks': 0}
+        duration = duration.split(' ')
+
+        for i in range(len(duration)):
+            if duration[i] in map_.keys():
+                map_[duration[i]] = int(duration[i-1])
+
+        duration = timedelta(days=map_['days'], seconds=map_['seconds'], microseconds=map_['microseconds'], milliseconds=map_['milliseconds'], minutes=map_['minutes'], hours=map_['hours'], weeks=map_['weeks'])
+
+        issuance_date = datetime.strptime(certificate['IssuanceDate'], '%Y-%m-%dT%H:%M:%S.%f')
+        expiry =  (issuance_date + duration).isoformat()
+
+        if (datetime.utcnow()).isoformat() >= expiry:
+            return False
+        return True
+
 
     def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca, path='certificates/'):
         if os.path.exists(f'{path}{user_id}_certificate.json'):
             certificate = json.load(open(f'{path}{user_id}_certificate.json'))
+
+
+            if not self.__verify_certificate_validity__(certificate):
+                print(f"The previous certificate for {user_id} has been expired. Generating a new one.")
+                certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca)
+                json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
+
         else:
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -179,7 +205,7 @@ def main():
     # Initialize the Certificate Authority
     CA = CertificateAuthority()
 
-    # Main setup for CA and clients    
+    # Main setup for CA and clients
     ca_private_key, ca_public_key = CA.get_keys('CA')
     client_a_private_key, client_a_public_key = CA.get_keys('Client_A')
     client_b_private_key, client_b_public_key = CA.get_keys('Client_B')
@@ -190,8 +216,19 @@ def main():
     cert_b = CA.get_certificate('Client_B', client_b_public_key, 'CA', ca_private_key)
 
 
-    # Clients verify each other's certificate
-    if CA.verify_certificate(cert_a, ca_public_key) and CA.verify_certificate(cert_b, ca_public_key):
+    # Clients verify each other's certificate using CA's public key
+    verify_cert_a = CA.verify_certificate(cert_a, ca_public_key)
+    verify_cert_b = CA.verify_certificate(cert_b, ca_public_key)
+
+    if not verify_cert_a or not verify_cert_b:
+        if not verify_cert_a:
+            print("Client A's certificate verification failed.")
+        
+        if not verify_cert_b:
+            print("Client B's certificate verification failed.")
+
+    else:
+        print("Certificates verified successfully.")
         # Simulate a series of messages from A to B and responses back from B to A.
         messages_for_b = ['Hello1', 'Hello2', 'Hello3']
         acks_for_a = ['ACK1', 'ACK2', 'ACK3']
@@ -210,8 +247,6 @@ def main():
             # Client A decrypts the ack
             decrypted_ack = CA.decrypt_message(encrypted_ack, client_a_private_key)
             print(f'Client A received: {decrypted_ack}')
-    else:
-        print("Certificate verification failed.")
 
 
 if __name__ == "__main__":
