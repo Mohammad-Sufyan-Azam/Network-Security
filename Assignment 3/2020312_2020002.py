@@ -59,17 +59,18 @@ class CertificateAuthority:
         # The certificate with its signature
         certificate['Signature'] = signature.hex()
 
-        # Save the certificate to a file
-        json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
-
         return certificate
     
 
-    def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca):
-        if os.path.exists(f'certificates/{user_id}_certificate.json'):
-            certificate = json.load(open(f'certificates/{user_id}_certificate.json'))
+    def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca, path='certificates/'):
+        if os.path.exists(f'{path}{user_id}_certificate.json'):
+            certificate = json.load(open(f'{path}{user_id}_certificate.json'))
         else:
-            certificate = self.create_certificate(user_id, user_public_key, issuer_id, private_key_ca)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca)
+            json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
+        
         return certificate
 
 
@@ -164,6 +165,8 @@ class CertificateAuthority:
             private_key = self.__read_keys__(f'{path}{userID}_private_key.pem')
             public_key = self.__read_keys__(f'{path}{userID}_public_key.pem', private=False)
         else:
+            if not os.path.exists(path):
+                os.makedirs(path)
             private_key, public_key = self.generate_keys()
             self.__store_keys__(private_key, f'{path}{userID}_private_key.pem')
             self.__store_keys__(public_key, f'{path}{userID}_public_key.pem', private=False)
@@ -183,8 +186,8 @@ def main():
 
 
     # CA issues certificates for client A and B
-    cert_a = CA.get_certificate('Client_A', client_b_public_key, 'CA', ca_private_key)
-    cert_b = CA.get_certificate('Client_B', client_a_public_key, 'CA', ca_private_key)
+    cert_a = CA.get_certificate('Client_A', client_a_public_key, 'CA', ca_private_key)
+    cert_b = CA.get_certificate('Client_B', client_b_public_key, 'CA', ca_private_key)
 
 
     # Clients verify each other's certificate
