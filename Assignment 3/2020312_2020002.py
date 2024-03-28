@@ -59,7 +59,7 @@ class CertificateAuthority:
         certificate['Signature'] = signature.hex()
 
         # Save the certificate to a file
-        json.dump(certificate, open(f'{user_id}_certificate.json', 'w'), indent=4)
+        json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
 
         return certificate
 
