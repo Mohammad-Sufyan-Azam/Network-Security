@@ -19,19 +19,9 @@ class CertificateAuthority:
     def __init__(self):
         pass
 
-    # Function to generate RSA key pair
-    def generate_keys(self):
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048,
-            backend=default_backend()
-        )
-        public_key = private_key.public_key()
-        return private_key, public_key
-
 
     # Function to create a certificate
-    def __create_certificate__(self, user_id, user_public_key, issuer_id, private_key_ca, duration='365 days'):
+    def __create_certificate__(self, user_id, user_public_key, issuer_id, private_key_ca, duration):
         certificate = {
             'ID': user_id,
             'PublicKey': user_public_key.public_bytes(
@@ -40,7 +30,7 @@ class CertificateAuthority:
             ).decode('utf-8'),
             'Issuer': issuer_id,
             'IssuanceDate': datetime.utcnow().isoformat(),
-            'Duration': duration
+            'Duration': duration        # 365 days by default
         }
 
         # Serialize and sign the certificate with CA's private key
@@ -81,20 +71,19 @@ class CertificateAuthority:
         return True
 
 
-    def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca, path='certificates/'):
+    def get_certificate(self, user_id, user_public_key, issuer_id, private_key_ca, duration='365 days', path='certificates/'):
         if os.path.exists(f'{path}{user_id}_certificate.json'):
             certificate = json.load(open(f'{path}{user_id}_certificate.json'))
 
-
             if not self.__verify_certificate_validity__(certificate):
                 print(f"The previous certificate for {user_id} has been expired. Generating a new one.")
-                certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca)
+                certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca, duration=duration)
                 json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
 
         else:
             if not os.path.exists(path):
                 os.makedirs(path)
-            certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca)
+            certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, private_key_ca, duration=duration)
             json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
         
         return certificate
@@ -149,6 +138,17 @@ class CertificateAuthority:
             )
         )
         return plaintext.decode('utf-8')
+
+
+    # Function to generate RSA key pair
+    def generate_keys(self):
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend()
+        )
+        public_key = private_key.public_key()
+        return private_key, public_key
 
 
     # Function to store keys in PEM format
