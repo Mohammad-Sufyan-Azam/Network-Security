@@ -1,79 +1,83 @@
 from random import randint
 from math import gcd
-import json
 
 class RSA ():
-    def __init__(self) -> None:
+    def __init__(self, p=229, q=31) -> None:
         self.n = 0
         self.e = 0
         self.d = 0
+        self.p = p
+        self.q = q
+
+
+    def __create_e_and_d__ (self, phi_n):
+        try:
+            self.e = randint(phi_n/2, phi_n)
+            while (gcd(self.e, phi_n) != 1):
+                self.e = randint(phi_n/2, phi_n)
+            
+            self.d = pow (self.e, -1, phi_n)
+        except:
+            print("Error generating e and d key.")
 
 
     def generate_keys (self):
-        p = 229
-        q = 31
-        self.n = p*q
-        phi_n = (p-1) * (q-1)
-        self.e = randint (phi_n/2, phi_n)
-        while (gcd (self.e, phi_n) != 1):
-            self.e = randint (phi_n/2, phi_n)
-        self.d = pow (self.e, -1, phi_n)
-
+        try:
+            self.n = self.p * self.q
+            phi_n = (self.p - 1) * (self.q - 1)
+            self.__create_e_and_d__ (phi_n)
+        except:
+            print("Error generating keys.")
+    
 
     def get_public_key (self):
-        public = f"{self.n},{self.d}"
-        return (public)
+        try:
+            public = f"{self.n},{self.d}"
+            return (public)
+        except:
+            print("Error getting public key.")
+            return None
 
 
     def save_public_key (self, filename):
-        with open (f"{filename}", "w") as f:
-            f.write (self.get_public_key ())
+        try:
+            p_key = self.get_public_key()
+            if p_key is not None:
+                with open (f"{filename}", "w") as f:
+                    f.write(p_key)
+            else:
+                print("Error getting public key to save.")
+        except:
+            print("Error saving public key.")
+
 
     def load_public_key (self, filename):
-        with open (f"{filename}", "r") as f:
-            data = f.read ()
-            self.n = int (data.split (",")[0])
-            self.d = int (data.split (",")[1])
+        try:           
+            with open (f"{filename}", "r") as f:
+                data = f.read ()
+                self.n, self.d = data.split(",")
+                self.n, self.d = int(self.n), int(self.d)
+        except:
+            print("Error loading public key. Try checking file path.")
+
+
+    def __crypt__(self, data:str, key:int, n:int):
+        crypted = ""
+        for char in data:
+            num = ord (char)
+            enc_num = (num ** key) % n
+            crypted = crypted + chr (enc_num)
+        return crypted
+
 
     def encrypt (self, data:str):
-        encrypted = ""
-        for char in data:
-            num = ord (char)
-            enc_num = (num ** self.e) % self.n
-            encrypted = encrypted + chr (enc_num)
-        return encrypted
+        return self.__crypt__ (data, self.e, self.n)
 
     def decrypt (self, data:str):
-        decrypted = ""
-        for char in data:
-            num = ord (char)
-            dec_num = (num ** self.d) % self.n
-            decrypted = decrypted + chr (dec_num)
-        return decrypted
+        return self.__crypt__ (data, self.d, self.n)
 
     def encrypt_pub (self, data:str):
-        encrypted = ""
-        for char in data:
-            num = ord (char)
-            enc_num = (num ** self.d) % self.n
-            encrypted = encrypted + chr (enc_num)
-        return encrypted
+        return self.__crypt__ (data, self.d, self.n)
 
     def decrypt_pvt (self, data:str):
-        decrypted = ""
-        for char in data:
-            num = ord (char)
-            dec_num = (num ** self.e) % self.n
-            decrypted = decrypted + chr (dec_num)
-        return decrypted
-
-
-
-
-# if __name__ == "__main__":
-#     rsa = RSA ()
-#     rsa.generate_keys ()
-#     c = rsa.encrypt_pub ("md5678")
-#     print (c)
-#     p = rsa.decrypt_pvt (c)
-#     print (p)
+        return self.__crypt__ (data, self.e, self.n)

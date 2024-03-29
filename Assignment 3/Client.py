@@ -31,6 +31,7 @@ class Client ():
 
         self.certificate = self.get_certificate ()
         print ("Acquired self Certificate")
+        th1 = threading.Thread 
         # th1.start ()
         self.server_threads = []
 
