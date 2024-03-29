@@ -31,14 +31,28 @@ class Client ():
 
         self.certificate = self.get_certificate ()
         print ("Acquired self Certificate")
-        th1 = threading.Thread (target=self.start_server, args=())
-        th1.start ()
+        # th1.start ()
+        self.server_threads = []
 
         if self.ID == RESPONDER:
             th2 = threading.Thread (target=self.communicate, args=())
             th2.start ()
+            th2.join ()
+        else:
+            try:
+                th1 = threading.Thread (target=self.start_server, args=())
+                th1.start ()
+                # self.start_server ()
+                # for th1_ in self.server_threads:
+                #     th1_.join ()
+                th1.join()
+            except KeyboardInterrupt as e:
+                print(f"Exiting Client.. Keyboard Interrupt {e}")
+            except Exception as e:
+                print(f"Exiting Client.. Keyboard Interrupt {e}")
         
-        th1.join ()
+        # th1.join ()
+        print('Server thread joined')
 
 
     def get_certificate (self):
@@ -58,12 +72,26 @@ class Client ():
             with socket.socket (socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((HOST, SERVER_PORT))
                 s.listen()
+                s.settimeout(7)
                 self.server_threads = []
                 while True:
-                    conn, addr = s.accept()
-                    t = threading.Thread (target=self.handle_connection, args=(conn,))
-                    self.server_threads.append(t)
-                    t.start ()
+                    try:
+                        conn, addr = s.accept()
+                        print(f"Connected by {addr}")
+                        t = threading.Thread (target=self.handle_connection, args=(conn, ))
+                        self.server_threads.append(t)
+                        t.start ()
+                        # t.join()
+                        print('Server thread joined')
+                    # except socket.timeout:
+                    #     pass
+                    except Exception as e:
+                        print(f"Exiting Client.. Keyboard Interrupt {e}")
+                        # Join all threads and return
+                        for th in self.server_threads:
+                            th.join()
+                        return
+
         except KeyboardInterrupt:
             print("Exiting Client")
 
@@ -75,7 +103,11 @@ class Client ():
                     data = connection.recv(1024)
                     if not data:
                         break
+                    print('Received')
                     self.handle_request (data.decode ("UTF-8"), connection)
+                    print('Handled')
+            print('Connection closed')
+
         except KeyboardInterrupt:
             print ("Exiting")
 
@@ -135,6 +167,7 @@ class Client ():
                 s.sendall(bytes (enc, "UTF-8"))
                 ack = s.recv(1024).decode ("UTF-8")
                 print (f"Client: {self.keys.decrypt_pvt (ack)}")
+        print ("Communication done")
 
 
 
@@ -158,4 +191,10 @@ HOST, SERVER_PORT = a[SELF_ID][0], int(a[SELF_ID][1])
 _, CLIENT_PORT = a[CLIENT_ID][0], int(a[CLIENT_ID][1])
 _, CA_PORT = a[CA_ID][0], int(a[CA_ID][1])
 
-Client(SELF_ID)
+cl = Client(SELF_ID)
+
+# if SELF_ID == RESPONDER:
+#     cl.communicate()
+
+# cl.start_server()
+

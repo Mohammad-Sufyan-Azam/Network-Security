@@ -1,5 +1,5 @@
 import socket
-import _thread
+import threading
 import json
 from RSA import RSA
 import json
@@ -37,16 +37,29 @@ class CA ():
         self.keys.generate_keys ()
         self.keys.save_public_key ("ca.json")
         self.start_server ()
+        print('Closing Certificate Authority')
 
 
     def start_server (self):
+        self.server_threads = []
         try:
             with socket.socket (socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((HOST, PORT))
                 s.listen()
+                s.settimeout(10)
                 while True:
-                    conn, addr = s.accept()
-                    _thread.start_new_thread (self.handle_connection, (conn,))
+                    try:
+                        conn, addr = s.accept()
+                        print(f"Connected by {addr}")
+                        th = threading.Thread (target=self.handle_connection, args=(conn,))
+                        self.server_threads.append (th)
+                        th.start ()
+
+                    except socket.timeout:
+                        for th in self.server_threads:
+                            th.join ()  
+                        print("Timeout!!.. Exiting CA")
+                        return
         except KeyboardInterrupt:
             print("Exiting CA")
 
