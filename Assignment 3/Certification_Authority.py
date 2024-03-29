@@ -8,42 +8,34 @@ from datetime import datetime
 HOST = "127.0.0.1"
 PORT = 4000
 
-class Certificate ():
+
+class CA:
     def __init__(self) -> None:
-        self.id_a = None
-        self.pub_a = None
-        self.time = None
-        self.duration = None
-        self.id_ca = None
-        self.cert = None
-
-    def generate_new_certificate (self, id_a, pub_a, duration, id_ca):
-        cert = {
-            "id":id_a,
-            "pub_a":pub_a,
-            "time":datetime.now ().timestamp (),
-            "duration":duration,
-            "id_ca":id_ca
-        }
-        self.cert = json.dumps (cert)
-
-
-class CA ():
-    def __init__ (self) -> None:
-        self.keys = RSA ()
+        self.keys = RSA()
         self.id = "CA"
-        self.certs = dict ()
+        self.certs = {}
 
-        self.keys.generate_keys ()
-        self.keys.save_public_key ("ca.json")
-        self.start_server ()
+        self.keys.generate_keys()
+        self.keys.save_public_key("CA_Public_Key.json")
+        self.start_server()
         print('Closing Certificate Authority')
+    
+
+    def generate_new_certificate(self, id, pub, duration, id_ca):
+        cert = {
+            "ID" : id,
+            "PublicKey": pub,
+            "IssuanceDate" : datetime.now().timestamp(),
+            "Duration" : duration,
+            "Issuer": id_ca
+        }
+        self.cert = json.dumps(cert)
 
 
-    def start_server (self):
+    def start_server(self):
         self.server_threads = []
         try:
-            with socket.socket (socket.AF_INET, socket.SOCK_STREAM) as s:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((HOST, PORT))
                 s.listen()
                 s.settimeout(10)
@@ -51,58 +43,60 @@ class CA ():
                     try:
                         conn, addr = s.accept()
                         print(f"Connected by {addr}")
-                        th = threading.Thread (target=self.handle_connection, args=(conn,))
-                        self.server_threads.append (th)
-                        th.start ()
+                        th = threading.Thread(target=self.handle_connection, args=(conn,))
+                        self.server_threads.append(th)
+                        th.start()
 
                     except socket.timeout:
                         for th in self.server_threads:
-                            th.join ()  
+                            th.join()
                         print("Timeout!!.. Exiting CA")
                         return
         except KeyboardInterrupt:
             print("Exiting CA")
 
-    def handle_connection (self, connection):
+
+    def handle_connection(self, connection):
         with connection:
             while True:
                 data = connection.recv(1024)
                 if not data:
                     break
-                self.handle_request (str (data).lstrip ("b'").rstrip ("'"), connection)
+                self.handle_request(str(data).lstrip("b'").rstrip("'"), connection)
 
 
-    def handle_request (self, request, connection):
-        print (request)
-        request_type = request.split (";")[0]
-        request = request.split (";")[1]
+    def handle_request(self, request, connection):
+        request_type, request = request.split(";")
+
         if (request_type == "csr"):
             print (f"CSR request for {request}")
-            cert = self.certificate_signing_request (request)
-            connection.sendall (bytes (cert, "UTF-8"))
+            cert = self.certificate_signing_request(request)
+            connection.sendall(bytes(cert, "UTF-8"))
+        
         else:
-            print (f"Certificate request for {request}")
-            if (self.certs.get (request) is not None):
+            if (self.certs.get(request) is not None):
                 print (f"Certificate request for {request}")
-                connection.sendall (bytes (self.certs.get (request), "UTF-8"))
+                connection.sendall(bytes(self.certs.get(request), "UTF-8"))
+        
+        print('-' * 50, '\n')
 
 
-    def certificate_signing_request (self, request):
-        request = json.loads (request)
-        if (request.get ("id") is None) or (request.get ("public_key") is None):
+    def certificate_signing_request(self, request):
+        request = json.loads(request)
+        if (request.get("ID") is None) or (request.get("PublicKey") is None):
             return "FAILED"
 
-        cert = Certificate ()
-        cert.generate_new_certificate (request.get ("id"),
-                                       request.get ("public_key"),
-                                       30,
-                                       self.id)
-        enc = self.keys.encrypt (cert.cert)
-        dec = self.keys.decrypt (enc)
-        print (dec)
-        self.certs[request.get ("id")] = enc
+        
+        self.generate_new_certificate(request.get("ID"),
+                                    request.get("PublicKey"),
+                                    30,
+                                    self.id)
+        enc = self.keys.encrypt(self.cert)
+        dec = self.keys.decrypt(enc)
+        print(dec)
+        self.certs[request.get("ID")] = enc
         return enc
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     ca = CA ()

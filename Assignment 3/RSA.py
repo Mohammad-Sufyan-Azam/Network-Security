@@ -39,11 +39,11 @@ class RSA ():
             return None
 
 
-    def save_public_key (self, filename):
+    def save_public_key(self, filename):
         try:
             p_key = self.get_public_key()
             if p_key is not None:
-                with open (f"{filename}", "w") as f:
+                with open(f"{filename}", "w") as f:
                     f.write(p_key)
             else:
                 print("Error getting public key to save.")
@@ -51,10 +51,10 @@ class RSA ():
             print("Error saving public key.")
 
 
-    def load_public_key (self, filename):
+    def load_public_key(self, filename):
         try:           
-            with open (f"{filename}", "r") as f:
-                data = f.read ()
+            with open(f"{filename}", "r") as f:
+                data = f.read()
                 self.n, self.d = data.split(",")
                 self.n, self.d = int(self.n), int(self.d)
         except:
@@ -64,20 +64,20 @@ class RSA ():
     def __crypt__(self, data:str, key:int, n:int):
         crypted = ""
         for char in data:
-            num = ord (char)
+            num = ord(char)
             enc_num = (num ** key) % n
-            crypted = crypted + chr (enc_num)
+            crypted = crypted + chr(enc_num)
         return crypted
 
 
-    def encrypt (self, data:str):
-        return self.__crypt__ (data, self.e, self.n)
+    def encrypt(self, data:str):
+        return self.__crypt__(data, self.e, self.n)
 
-    def decrypt (self, data:str):
-        return self.__crypt__ (data, self.d, self.n)
+    def decrypt(self, data:str):
+        return self.__crypt__(data, self.d, self.n)
 
-    def encrypt_pub (self, data:str):
-        return self.__crypt__ (data, self.d, self.n)
+    def encrypt_pub(self, data:str):
+        return self.__crypt__(data, self.d, self.n)
 
-    def decrypt_pvt (self, data:str):
-        return self.__crypt__ (data, self.e, self.n)
+    def decrypt_pvt(self, data:str):
+        return self.__crypt__(data, self.e, self.n)
