@@ -27,6 +27,13 @@ class RSA ():
             print("Error generating keys.")
     
 
+    # def get_keys(self, path="keys/CA_Publc_Key.json"):
+    #     try:
+    #         self.load_keys("keys/public.key")
+    #     except:
+    #         print("Error getting keys.")
+    
+
     def get_public_key(self):
         try:
             public = f"{self.n},{self.d}"

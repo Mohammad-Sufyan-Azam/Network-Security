@@ -110,7 +110,7 @@ class CA:
                 while True:
                     try:
                         conn, addr = s.accept()
-                        print(f"Connected by {addr}")
+                        # print(f"Connected by {addr}")
                         th = threading.Thread(target=self.handle_connection, args=(conn,))
                         self.server_threads.append(th)
                         th.start()
@@ -141,8 +141,8 @@ class CA:
     def handle_request(self, request, connection):
         request_type, request = request.split(";")
 
-        if (request_type == "csr"):
-            print ("CSR request for", request)
+        if (request_type == "Certificate_Signing_Request"):
+            print ("Certificate Signing Request For", request)
             cert = self.certificate_signing_request(request)
             connection.sendall(bytes(cert, "UTF-8"))
         
