@@ -3,34 +3,31 @@ from math import gcd
 
 class RSA ():
     def __init__(self, p=229, q=31) -> None:
-        self.n = 0
-        self.e = 0
-        self.d = 0
-        self.p = p
-        self.q = q
+        self.n, self.e, self.d = 0, 0, 0
+        self.p, self.q = p, q
 
 
-    def __create_e_and_d__ (self, phi_n):
+    def __create_e_and_d__(self, phi_n):
         try:
             self.e = randint(phi_n/2, phi_n)
             while (gcd(self.e, phi_n) != 1):
                 self.e = randint(phi_n/2, phi_n)
             
-            self.d = pow (self.e, -1, phi_n)
+            self.d = pow(self.e, -1, phi_n)
         except:
             print("Error generating e and d key.")
 
 
-    def generate_keys (self):
+    def generate_keys(self):
         try:
             self.n = self.p * self.q
             phi_n = (self.p - 1) * (self.q - 1)
-            self.__create_e_and_d__ (phi_n)
+            self.__create_e_and_d__(phi_n)
         except:
             print("Error generating keys.")
     
 
-    def get_public_key (self):
+    def get_public_key(self):
         try:
             public = f"{self.n},{self.d}"
             return (public)

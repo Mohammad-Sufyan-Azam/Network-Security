@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import threading
 import socket
 import json
@@ -23,22 +23,23 @@ class Client ():
     def __init__ (self, ID, messages, acks) -> None:
         self.certificate = ""
         self.ID = ID
+        self.server_threads = []
         self.keys = RSA()
         self.client_keys = RSA()
+        self.keys_path = "keys/"
         self.messages = messages
         self.acks = acks
 
         self.keys.generate_keys()
-        print (f"Self public key: {self.keys.get_public_key ()}")
+        print (f"{self.ID} public key: {self.keys.get_public_key()}")
 
         self.certificate = self.get_certificate()
         print ("Acquired self Certificate")
-        self.server_threads = []
 
         if self.ID == RESPONDER:
             thread_2 = threading.Thread(target=self.communicate, args=())
-            thread_2.start ()
-            thread_2.join ()
+            thread_2.start()
+            thread_2.join()
         else:
             try:
                 thread_1 = threading.Thread(target=self.start_server, args=())
@@ -50,7 +51,7 @@ class Client ():
         print('Server thread joined')
 
 
-    def get_certificate (self):
+    def get_certificate(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, CA_PORT))
             dict = {
@@ -69,6 +70,7 @@ class Client ():
                 s.listen()
                 s.settimeout(7)
                 self.server_threads = []
+
                 while True:
                     try:
                         conn, addr = s.accept()
@@ -76,13 +78,10 @@ class Client ():
                         t = threading.Thread(target=self.handle_connection, args=(conn, ))
                         self.server_threads.append(t)
                         t.start()
-                        # t.join()
                         print('Server thread joined')
-                    # except socket.timeout:
-                    #     pass
+                    
                     except Exception as e:
                         print(f"Exiting Client.. {e}")
-                        # Join all threads and return
                         for th in self.server_threads:
                             th.join()
                         return
@@ -122,20 +121,14 @@ class Client ():
 
 
     def request_certificate_of_client(self):
-        if CA_MODE:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, CA_PORT))
-                data = f"cert;{CLIENT_ID}"
-                s.sendall(bytes(data, "UTF-8"))
-                cert = s.recv(1024).decode("UTF-8")
-        else:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, CLIENT_PORT))
-                data = b"cert"
-                s.sendall(data)
-                cert = s.recv(1024).decode("UTF-8")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((HOST, CA_PORT))
+            data = f"cert;{CLIENT_ID}"
+            s.sendall(bytes(data, "UTF-8"))
+            cert = s.recv(1024).decode("UTF-8")
 
         keys = RSA()
+        # if os.path.exists(self.keys_path+"CA_Public_Key.json"):
         keys.load_public_key("CA_Public_Key.json")
         cert = keys.decrypt(cert)
         try:
@@ -145,10 +138,11 @@ class Client ():
         except:
             print("Invalid certificate")
             return
+        
         public_key = json.loads(cert).get("PublicKey")
         print(public_key)
-        self.client_keys.n = int(public_key.split (",")[0])
-        self.client_keys.d = int(public_key.split (",")[1])
+
+        self.client_keys.n, self.client_keys.d = int(public_key.split(",")[0]), int(public_key.split(",")[1])
 
 
     def communicate (self):
@@ -158,7 +152,7 @@ class Client ():
         for message in self.messages:
             enc = self.client_keys.encrypt_pub(message)
             print("Sending: ", message)
-            print("Encrypted: ", enc, " Length: ", len(enc))
+            # print("Encrypted: ", enc, " Length: ", len(enc))
 
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((HOST, CLIENT_PORT))
@@ -172,31 +166,27 @@ class Client ():
 
 
 
-CA_MODE = 1
 CA_ID = "CA"
 RESPONDER = "Client_A"
 MESSAGE_LIST = ["Hello1", "Hello2", "Hello3"]
 ACK_LIST = ["Ack1", "Ack2", "Ack3"]
+
 # get the arguement from terminal
 arg = sys.argv[1]
 if arg == "A":
     SELF_ID = "Client_A"
     CLIENT_ID = "Client_B"
+
 elif arg == "B":
     SELF_ID = "Client_B"
     CLIENT_ID = "Client_A"
+
 else:
     print("Invalid arguement")
 
-a = get_credentials("config.conf")
-HOST, SERVER_PORT = a[SELF_ID][0], int(a[SELF_ID][1])
-_, CLIENT_PORT = a[CLIENT_ID][0], int(a[CLIENT_ID][1])
-_, CA_PORT = a[CA_ID][0], int(a[CA_ID][1])
+cred = get_credentials("config.conf")
+HOST, SERVER_PORT = cred[SELF_ID][0], int(cred[SELF_ID][1])
+_, CLIENT_PORT = cred[CLIENT_ID][0], int(cred[CLIENT_ID][1])
+_, CA_PORT = cred[CA_ID][0], int(cred[CA_ID][1])
 
 Client(SELF_ID, MESSAGE_LIST, ACK_LIST)
-
-# if SELF_ID == RESPONDER:
-#     cl.communicate()
-
-# cl.start_server()
-
