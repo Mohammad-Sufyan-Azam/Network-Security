@@ -20,7 +20,7 @@ def get_credentials(name):
 
 
 class Client ():
-    def __init__ (self, ID, messages, acks) -> None:
+    def __init__ (self, ID, Client_ID, RESPONDER, messages, acks, server_address, client_address, ca_address) -> None:
         self.certificate = ""
         self.ID = ID
         self.server_threads = []
@@ -30,8 +30,13 @@ class Client ():
         self.messages = messages
         self.acks = acks
 
+        self.client_ID = Client_ID
+        self.server_address = server_address
+        self.client_address = client_address
+        self.ca_address = ca_address
+
         self.keys.generate_keys()
-        print (f"{self.ID} public key: {self.keys.get_public_key()}")
+        print (f"{self.ID}'s public key: {self.keys.get_public_key()}")
 
         self.certificate = self.get_certificate()
         print ("Acquired self Certificate")
@@ -45,6 +50,7 @@ class Client ():
                 thread_1 = threading.Thread(target=self.start_server, args=())
                 thread_1.start()
                 thread_1.join()
+            
             except Exception as e:
                 print(f"Exiting Client.. {e}")
         
@@ -53,7 +59,7 @@ class Client ():
 
     def get_certificate(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((HOST, CA_PORT))
+            s.connect(self.ca_address)
             dict = {
                 "ID":self.ID,
                 "PublicKey":self.keys.get_public_key(),
@@ -66,7 +72,7 @@ class Client ():
     def start_server (self):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind((HOST, SERVER_PORT))
+                s.bind(self.server_address)
                 s.listen()
                 s.settimeout(7)
                 self.server_threads = []
@@ -122,13 +128,12 @@ class Client ():
 
     def request_certificate_of_client(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((HOST, CA_PORT))
-            data = f"cert;{CLIENT_ID}"
+            s.connect(self.ca_address)
+            data = f"cert;{self.client_ID}"
             s.sendall(bytes(data, "UTF-8"))
             cert = s.recv(1024).decode("UTF-8")
 
         keys = RSA()
-        # if os.path.exists(self.keys_path+"CA_Public_Key.json"):
         keys.load_public_key("CA_Public_Key.json")
         cert = keys.decrypt(cert)
         try:
@@ -141,6 +146,7 @@ class Client ():
         
         public_key = json.loads(cert).get("PublicKey")
         print(public_key)
+        print("-" * 50)
 
         self.client_keys.n, self.client_keys.d = int(public_key.split(",")[0]), int(public_key.split(",")[1])
 
@@ -155,38 +161,44 @@ class Client ():
             # print("Encrypted: ", enc, " Length: ", len(enc))
 
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, CLIENT_PORT))
-                s.sendall(bytes (enc, "UTF-8"))
+                s.connect(self.client_address)
+                s.sendall(bytes(enc, "UTF-8"))
 
                 ack = s.recv(1024).decode ("UTF-8")
-                print (f"Receiving: {self.keys.decrypt_pvt (ack)}")
+                print (f"Receiving: {self.keys.decrypt_pvt(ack)}")
             
             print('-' * 50)
         print ("Communication done!")
 
 
 
-CA_ID = "CA"
-RESPONDER = "Client_A"
-MESSAGE_LIST = ["Hello1", "Hello2", "Hello3"]
-ACK_LIST = ["Ack1", "Ack2", "Ack3"]
+def main():
+    CA_ID = "CA"
+    RESPONDER = "Client_A"
+    MESSAGE_LIST = ["Hello1", "Hello2", "Hello3"]
+    ACK_LIST = ["Ack1", "Ack2", "Ack3"]
 
-# get the arguement from terminal
-arg = sys.argv[1]
-if arg == "A":
-    SELF_ID = "Client_A"
-    CLIENT_ID = "Client_B"
+    # get the arguement from terminal
+    arg = sys.argv[1]
+    if arg == "A":
+        SELF_ID = "Client_A"
+        CLIENT_ID = "Client_B"
 
-elif arg == "B":
-    SELF_ID = "Client_B"
-    CLIENT_ID = "Client_A"
+    elif arg == "B":
+        SELF_ID = "Client_B"
+        CLIENT_ID = "Client_A"
 
-else:
-    print("Invalid arguement")
+    else:
+        print("Invalid arguement")
 
-cred = get_credentials("config.conf")
-HOST, SERVER_PORT = cred[SELF_ID][0], int(cred[SELF_ID][1])
-_, CLIENT_PORT = cred[CLIENT_ID][0], int(cred[CLIENT_ID][1])
-_, CA_PORT = cred[CA_ID][0], int(cred[CA_ID][1])
+    # get the credentials from the config file
+    cred = get_credentials("config.conf")
+    server_address = cred[SELF_ID][0], int(cred[SELF_ID][1])
+    client_address = cred[CLIENT_ID][0], int(cred[CLIENT_ID][1])
+    ca_address = cred[CA_ID][0], int(cred[CA_ID][1])
 
-Client(SELF_ID, MESSAGE_LIST, ACK_LIST)
+    Client(SELF_ID, CLIENT_ID, RESPONDER, MESSAGE_LIST, ACK_LIST, server_address, client_address, ca_address)
+
+
+if __name__=="__main__":
+    main()

@@ -76,6 +76,11 @@ class CA:
         if os.path.exists(f'{path}{user_id}_certificate.json'):
             certificate = json.load(open(f'{path}{user_id}_certificate.json'))
 
+            if certificate.get("PublicKey") != user_public_key:
+                print(f"Public key for {user_id} has been changed. Generating a new certificate.")
+                certificate = self.__create_certificate__(user_id, user_public_key, issuer_id, duration=duration)
+                json.dump(certificate, open(f'certificates/{user_id}_certificate.json', 'w'), indent=4)
+
             # Checking if the certificate is still valid
             if not self.__verify_certificate_validity__(certificate):
                 print(f"The previous certificate for {user_id} has been expired. Generating a new one.")
