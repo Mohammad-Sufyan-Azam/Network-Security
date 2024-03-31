@@ -47,7 +47,7 @@ class Client ():
             thread_2.join()
         else:
             try:
-                thread_1 = threading.Thread(target=self.start_server, args=())
+                thread_1 = threading.Thread(target=self.server, args=())
                 thread_1.start()
                 thread_1.join()
             
@@ -71,7 +71,7 @@ class Client ():
             return received_bytes.decode("UTF-8")
 
 
-    def handle_connection(self, connection):
+    def handle_connection_request(self, connection):
         try:
             with connection:
                 while True:
@@ -79,7 +79,28 @@ class Client ():
                     if not data:
                         break
                     data = data.decode("UTF-8")
-                    self.handle_request(data, connection)
+                    request = data
+                    
+
+                    if request == "cert":
+                        data_ = bytes(self.certificate, "UTF-8")
+                        connection.sendall(data_)
+                    else:
+                        self.request_certificate_of_client()
+                        request = self.keys.decrypt_using_private_key(request)
+                        print("Receiving: ", request)
+
+                        if request in self.messages:
+                            ack = self.acks[self.messages.index(request)]
+                            data = self.client_keys.encrypt_using_public_key(ack)
+                            print("Sending: ", ack)
+                        else:
+                            data = self.client_keys.encrypt_using_public_key("Invalid message")
+                            print("Sending: Invalid message")
+                        
+                        connection.sendall(bytes(data, "UTF-8"))
+
+
             print('Connection closed')
             print('-' * 50, '\n')
 
@@ -87,7 +108,7 @@ class Client ():
             print("Exiting")
 
 
-    def start_server(self):
+    def server(self):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(self.server_address)
@@ -99,7 +120,7 @@ class Client ():
                     try:
                         conn, addr = s.accept()
                         # print(f"Connected by {addr}")
-                        t = threading.Thread(target=self.handle_connection, args=(conn, ))
+                        t = threading.Thread(target=self.handle_connection_request, args=(conn, ))
                         self.server_threads.append(t)
                         t.start()
                         # print('Server thread joined')
@@ -112,26 +133,6 @@ class Client ():
 
         except KeyboardInterrupt:
             print("Exiting Client")
-
-
-    def handle_request(self, request, connection):
-        if request == "cert":
-            data_ = bytes(self.certificate, "UTF-8")
-            connection.sendall(data_)
-        else:
-            self.request_certificate_of_client()
-            request = self.keys.decrypt_pvt(request)
-            print("Receiving: ", request)
-
-            if request in self.messages:
-                ack = self.acks[self.messages.index(request)]
-                data = self.client_keys.encrypt_pub(ack)
-                print("Sending: ", ack)
-            else:
-                data = self.client_keys.encrypt_pub("Invalid message")
-                print("Sending: Invalid message")
-            
-            connection.sendall(bytes(data, "UTF-8"))
 
 
     def request_certificate_of_client(self):
@@ -165,7 +166,7 @@ class Client ():
         self.request_certificate_of_client()
 
         for message in self.messages:
-            enc = self.client_keys.encrypt_pub(message)
+            enc = self.client_keys.encrypt_using_public_key(message)
             print("Sending: ", message)
             # print("Encrypted: ", enc, " Length: ", len(enc))
 
@@ -174,7 +175,7 @@ class Client ():
                 s.sendall(bytes(enc, "UTF-8"))
 
                 ack = s.recv(1024).decode ("UTF-8")
-                print(f"Receiving: {self.keys.decrypt_pvt(ack)}")
+                print(f"Receiving: {self.keys.decrypt_using_private_key(ack)}")
             
             print('-' * 50)
         print("Communication done!")

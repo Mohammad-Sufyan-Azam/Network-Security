@@ -80,8 +80,8 @@ class RSA ():
     def decrypt(self, data:str):
         return self.__crypt__(data, self.d, self.n)
 
-    def encrypt_pub(self, data:str):
+    def encrypt_using_public_key(self, data:str):
         return self.__crypt__(data, self.d, self.n)
 
-    def decrypt_pvt(self, data:str):
+    def decrypt_using_private_key(self, data:str):
         return self.__crypt__(data, self.e, self.n)

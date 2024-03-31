@@ -1,7 +1,7 @@
 {
     "ID": "Client_A",
-    "PublicKey": "7099,4061",
-    "IssuanceDate": "2024-03-31T07:12:33.103048",
+    "PublicKey": "7099,3793",
+    "IssuanceDate": "2024-03-31T11:35:38.591243",
     "Duration": "365 days",
     "Issuer": "CA"
 }

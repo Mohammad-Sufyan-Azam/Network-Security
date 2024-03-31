@@ -32,7 +32,7 @@ class CA:
         self.keys.generate_keys()
         self.keys.save_public_key("CA_Public_Key.json")
 
-        self.start_server()
+        self.server()
         print('Closing Certificate Authority')
     
 
@@ -100,7 +100,7 @@ class CA:
         return certificate
 
 
-    def start_server(self):
+    def server(self):
         self.server_threads = []
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -111,7 +111,7 @@ class CA:
                     try:
                         conn, addr = s.accept()
                         # print(f"Connected by {addr}")
-                        th = threading.Thread(target=self.handle_connection, args=(conn,))
+                        th = threading.Thread(target=self.handle_connection_request, args=(conn,))
                         self.server_threads.append(th)
                         th.start()
 
@@ -125,7 +125,7 @@ class CA:
             print("Exiting the Certificate Authority Server...")
 
 
-    def handle_connection(self, connection):
+    def handle_connection_request(self, connection):
         with connection:
             while True:
                 data = connection.recv(1024)
@@ -135,26 +135,19 @@ class CA:
                 request = str(data)
                 request = request.lstrip("b'").rstrip("'")
 
-                self.handle_request(request, connection)
+                request_type, request = request.split(";")
+                if (request_type == "Certificate_Signing_Request"):
+                    print ("Certificate Signing Request For", request)
+                    cert = self.sign_certificate_request(request)
+                    connection.sendall(bytes(cert, "UTF-8"))
+                else:
+                    if (self.certs.get(request) is not None):
+                        print (f"Certificate request for {request}")
+                        connection.sendall(bytes(self.certs.get(request), "UTF-8"))
+                print('-' * 50, '\n')
 
 
-    def handle_request(self, request, connection):
-        request_type, request = request.split(";")
-
-        if (request_type == "Certificate_Signing_Request"):
-            print ("Certificate Signing Request For", request)
-            cert = self.certificate_signing_request(request)
-            connection.sendall(bytes(cert, "UTF-8"))
-        
-        else:
-            if (self.certs.get(request) is not None):
-                print (f"Certificate request for {request}")
-                connection.sendall(bytes(self.certs.get(request), "UTF-8"))
-        
-        print('-' * 50, '\n')
-
-
-    def certificate_signing_request(self, request):
+    def sign_certificate_request(self, request):
         request = json.loads(request)
 
         # Check if ID and PublicKey are present in the request
