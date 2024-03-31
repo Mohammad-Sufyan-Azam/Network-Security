@@ -151,7 +151,7 @@ class Client ():
                 print("Invalid certificate")
                 return
             
-            public_key = json.loads(cert).get("PublicKey")
+            public_key = cert.get("PublicKey")
             print("Public Key:", public_key)
             print("-" * 50)
 
