@@ -2,8 +2,20 @@ from random import randint
 from math import gcd
 
 class RSA ():
+    def __gcd__(self, a, b):
+        if b == 0:
+            return a
+        else:
+            return self.__gcd__(b, a % b)
+
     def __init__(self, p=229, q=31) -> None:
         self.n, self.e, self.d = 0, 0, 0
+        # check if p and q are coprime
+        if self.__gcd__(p, q) == 1:
+            self.p, self.q = p, q
+        else:
+            print("p and q are not coprime. Please re run the program with correct p and q.")
+            exit(1)
         self.p, self.q = p, q
 
 
